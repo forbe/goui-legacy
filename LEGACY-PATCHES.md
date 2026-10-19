@@ -45,5 +45,12 @@ every internal import to match; use it if you want `require` to work.
 collection, which needs `IDWriteFactory3` — Windows 10 only (Fall Creators Update per
 Microsoft's custom-font-sets doc). It also takes a file path, and no `gui`/`ui` layer
 call exposes it. On Windows 7 an application font cannot reach DirectWrite by family
-name through this API; the app currently resolves "Alibaba PuHuiTi 2.0" from the
-system font collection, i.e. that font must be installed there.
+name through this API.
+
+Asking for a family that is not installed is not an error either: DirectWrite picks a
+fallback face and draws. Measured through this package on Windows 11, an unknown family
+and the empty family give identical layout metrics (`w=243.31 h=24.89`, mixed
+Chinese/Latin string at 14 pt), while the installed `Alibaba PuHuiTi 2.0` measures
+`w=251.81 h=26.13`. So the `theme/fonts/*.ttf` copies shipped here are inert packaging:
+a machine without that font shows its own default face, still legible but not the
+bundled design.
