@@ -1,0 +1,782 @@
+package gui
+
+import (
+	"errors"
+	"math"
+	"reflect"
+	"testing"
+	"time"
+
+	"github.com/golang-gui/goui/core/geometry"
+	"github.com/golang-gui/goui/core/signal"
+	"github.com/golang-gui/goui/layout"
+	"github.com/golang-gui/goui/platform"
+	"github.com/golang-gui/goui/platform/events"
+	"github.com/golang-gui/goui/platform/graphics"
+)
+
+type chromeTestWindow struct {
+	platform.Window
+	destroyed bool
+	handler   platform.EventHandler
+}
+
+func (w *chromeTestWindow) Title() string       { return "" }
+func (w *chromeTestWindow) RequestPaint() error { return nil }
+func (w *chromeTestWindow) Show() error         { return nil }
+func (w *chromeTestWindow) RequestClose() error {
+	if w.handler != nil {
+		w.handler(events.CloseEvent{})
+	}
+	return nil
+}
+func (w *chromeTestWindow) Destroy() { w.destroyed = true }
+
+type chromeTestPlatform struct {
+	platform.Platform
+	options                     WindowOptions
+	history                     []WindowOptions
+	created                     int
+	native                      platform.Window
+	creationNotifications       bool
+	creationError, painterError error
+	unsupportedIntegrated       bool
+	name                        string
+}
+
+func (p *chromeTestPlatform) Name() string { return p.name }
+
+func (p *chromeTestPlatform) NewWindow(size geometry.Size, handler platform.EventHandler, options platform.WindowOptions) (platform.Window, error) {
+	p.options = WindowOptions{Size: size, Chrome: WindowChromeMode(options.Chrome), Transparent: options.Transparent, SkipTaskbar: options.SkipTaskbar}
+	p.history = append(p.history, p.options)
+	p.created++
+	if p.creationError != nil {
+		return nil, p.creationError
+	}
+	if p.unsupportedIntegrated && options.Chrome == platform.WindowChromeIntegrated {
+		return nil, platform.ErrUnsupported
+	}
+	switch native := p.native.(type) {
+	case *desktopTestWindow:
+		native.handler = handler
+	case *chromeTestWindow:
+		native.handler = handler
+	}
+	if p.creationNotifications {
+		handler(events.SizeEvent{Width: size.Width, Height: size.Height, PixelWidth: size.Width * 2, PixelHeight: size.Height * 2})
+		handler(events.StateEvent{State: WindowStateHidden})
+	}
+	return p.native, nil
+}
+func (p *chromeTestPlatform) NewPainter(platform.Surface) (graphics.Painter, error) {
+	return nil, p.painterError
+}
+func (*chromeTestPlatform) NewInputMethod(platform.Window, platform.InputMethodHandler) (platform.InputMethod, error) {
+	return nil, platform.ErrUnsupported
+}
+func (*chromeTestPlatform) NewCursor(platform.Window) (platform.Cursor, error) {
+	return nil, platform.ErrUnsupported
+}
+func (*chromeTestPlatform) NewDragDrop(platform.Surface) (platform.DragDrop, error) {
+	return nil, platform.ErrUnsupported
+}
+
+func chromeFixture(t *testing.T, nativeButtons, nativeHit bool) (*window, *desktopTestWindow) {
+	t.Helper()
+	native := &desktopTestWindow{chrome: platform.WindowChromeIntegrated, state: WindowStateNormal,
+		nativeButtons: nativeButtons, controls: geometry.Rect(12, 8, 56, 14)}
+	if !nativeHit {
+		native.hitError = platform.ErrUnsupported
+	}
+	app := &application{platform: &chromeTestPlatform{native: native, creationNotifications: true}}
+	result, err := app.NewWindow(&WindowOptions{Size: geometry.Size{Width: 640, Height: 400}, Chrome: WindowChromeIntegrated})
+	if err != nil {
+		t.Fatal(err)
+	}
+	win := result.(*window)
+	win.SetWidget(newTestWidget())
+	// Creation reports Hidden; exercise layout as a shown window would.
+	if err := win.Show(); err != nil {
+		t.Fatal(err)
+	}
+	win.paint()
+	native.positions = nil
+	t.Cleanup(win.Destroy)
+	return win, native
+}
+
+func chromeInfo(chrome WindowChrome) (info ChromeInfo) {
+	h := chrome.ConnectInfo(func(v ChromeInfo) { info = v })
+	h.Disconnect()
+	return
+}
+
+func TestChromeNativeChangeCanDestroyWindow(t *testing.T) {
+	w, native := chromeFixture(t, true, false)
+	armed := false
+	w.Chrome().ConnectInfo(func(ChromeInfo) {
+		if armed {
+			w.Destroy()
+		}
+	})
+	native.controls = geometry.Rect(12, 12, 56, 14)
+	armed = true
+	w.chrome.nativeChanged()
+	if !w.destroyed {
+		t.Fatal("info subscriber was not called")
+	}
+}
+
+func TestWindowCreationOptionsAndService(t *testing.T) {
+	for _, mode := range []WindowChromeMode{WindowChromeNative, WindowChromeNone} {
+		plat := &chromeTestPlatform{native: &chromeTestWindow{}, creationNotifications: true}
+		app := &application{platform: plat}
+		options := WindowOptions{Size: geometry.Size{Width: 320, Height: 200}, Chrome: mode}
+		win, err := app.NewWindow(&options)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if plat.options != options || win.Chrome() == nil || win.Chrome() != win.Chrome() {
+			t.Fatal("lost creation/service contract")
+		}
+		if info := chromeInfo(win.Chrome()); info.Mode != mode || info.Enabled {
+			t.Fatalf("wrong fallback info: %+v", info)
+		}
+		if win.Widget() != nil {
+			t.Fatal("injected hidden root")
+		}
+		root := NewLinearBox(layout.DirectionVertical)
+		win.SetWidget(root)
+		if win.Widget() != root {
+			t.Fatal("wrapped user root")
+		}
+		if win.(*window).width != 320 || win.(*window).pixelWidth != 640 {
+			t.Fatal("lost creation-time size event")
+		}
+		win.Destroy()
+	}
+}
+
+func TestWindowSkipTaskbarPreservedThroughChromeFallback(t *testing.T) {
+	for _, chrome := range []WindowChromeMode{WindowChromeNative, WindowChromeNone, WindowChromeIntegrated} {
+		for _, fallback := range []bool{false, true} {
+			native := &desktopTestWindow{chrome: platform.WindowChrome(chrome), state: WindowStateHidden}
+			plat := &chromeTestPlatform{native: native, unsupportedIntegrated: fallback}
+			app := &application{platform: plat}
+			options := WindowOptions{Chrome: chrome, SkipTaskbar: true}
+			win, err := app.NewWindow(&options)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, request := range plat.history {
+				if !request.SkipTaskbar || request.Transparent || request.Size != defaultWindowOptions.Size {
+					t.Fatalf("creation preference lost: %+v", request)
+				}
+			}
+			if len(app.Windows()) != 1 || app.Windows()[0] != win {
+				t.Fatal("taskbar omission changed ordinary window registration")
+			}
+			win.Destroy()
+		}
+	}
+}
+
+func TestNoneChromeResizeRegions(t *testing.T) {
+	for _, nativeHit := range []bool{false, true} {
+		native := &desktopTestWindow{chrome: platform.WindowChromeNone, state: WindowStateNormal}
+		if !nativeHit {
+			native.hitError = platform.ErrUnsupported
+		}
+		app := &application{platform: &chromeTestPlatform{native: native, creationNotifications: true}}
+		result, err := app.NewWindow(&WindowOptions{Chrome: WindowChromeNone, Transparent: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		win := result.(*window)
+		t.Cleanup(win.Destroy)
+		root := newTestWidget()
+		win.SetWidget(root)
+		if err := win.Show(); err != nil {
+			t.Fatal(err)
+		}
+		win.paint()
+		if !win.chrome.info.Enabled || win.chrome.info.Controls != ChromeControlsNone || win.controls != nil {
+			t.Fatal("None must enable regions without adding controls")
+		}
+		region := ChromeRegionTop
+		win.Chrome().ConnectQueryRegion(func(_ geometry.Point, r *ChromeRegion) { *r = region })
+		clicks := 0
+		click := NewClickEventController()
+		click.ConnectClicked(func(EventContext) { clicks++ })
+		root.AddEventController(click)
+		hits := []platform.WindowHit{platform.WindowHitTop, platform.WindowHitBottom, platform.WindowHitLeft, platform.WindowHitRight,
+			platform.WindowHitTopLeft, platform.WindowHitTopRight, platform.WindowHitBottomLeft, platform.WindowHitBottomRight}
+		for i, hit := range hits {
+			region = ChromeRegionTop + ChromeRegion(i)
+			if nativeHit {
+				if got := native.hitTest(geometry.Point{X: 20, Y: 20}); got != hit {
+					t.Fatalf("hit %v != %v", got, hit)
+				}
+			} else {
+				clickAt(win, geometry.Point{X: 20, Y: 20})
+				if len(native.resizeRequests) != i+1 || native.resizeRequests[i] != platform.WindowEdge(i) {
+					t.Fatal(native.resizeRequests)
+				}
+			}
+		}
+		if clicks != 0 || click.Pressed() || win.dispatcher.captureTarget != nil {
+			t.Fatal("resize started a widget click")
+		}
+		if nativeHit && len(native.resizeRequests) != 0 {
+			t.Fatal("duplicate native operation")
+		}
+		if !nativeHit {
+			// No content or decoration tree: host regions still receive the press.
+			win.SetWidget(nil)
+			win.paint()
+			before := len(native.resizeRequests)
+			clickAt(win, geometry.Point{X: 20, Y: 20})
+			if len(native.resizeRequests) != before+1 || clicks != 0 {
+				t.Fatal("an empty host lost its custom resize region")
+			}
+			native.commandError = platform.ErrUnavailable
+			clickAt(win, geometry.Point{X: 20, Y: 20})
+			if clicks != 0 || click.Pressed() {
+				t.Fatal("a failed native resize must not turn an accepted resize press into a click")
+			}
+			native.commandError = nil
+			native.onMove = win.Destroy
+			clickAt(win, geometry.Point{X: 20, Y: 20})
+			if !win.destroyed || clicks != 0 {
+				t.Fatal("resize destruction was unsafe")
+			}
+		}
+	}
+}
+
+func TestWindowCreationFallbackAndErrors(t *testing.T) {
+	for _, failure := range []error{nil, errors.New("creation failure")} {
+		plat := &chromeTestPlatform{native: &chromeTestWindow{}, unsupportedIntegrated: true, creationError: failure}
+		app := &application{platform: plat}
+		win, err := app.NewWindow(&WindowOptions{Chrome: WindowChromeIntegrated})
+		if failure != nil {
+			if win != nil || !errors.Is(err, failure) || plat.created != 1 {
+				t.Fatal("retried real creation error")
+			}
+			continue
+		}
+		if err != nil || plat.created != 2 || chromeInfo(win.Chrome()).Enabled {
+			t.Fatalf("fallback: %v, %+v", err, plat.history)
+		}
+		if plat.history[0].Chrome != WindowChromeIntegrated || plat.history[1] != defaultWindowOptions {
+			t.Fatal("incorrect fallback options")
+		}
+		win.Destroy()
+	}
+	winNative := &desktopTestWindow{chrome: platform.WindowChromeIntegrated}
+	plat := &chromeTestPlatform{native: winNative, painterError: platform.ErrUnsupported}
+	app := &application{platform: plat}
+	if win, err := app.NewWindow(&WindowOptions{Chrome: WindowChromeIntegrated}); win != nil || err == nil || plat.created != 1 || !winNative.destroyed || winNative.hitTest != nil {
+		t.Fatal("painter failure retried or leaked native callback")
+	}
+}
+
+func TestWindowDefaultOptionsAndInvalidCreation(t *testing.T) {
+	plat := &chromeTestPlatform{native: &chromeTestWindow{}}
+	app := &application{platform: plat}
+	win, err := app.NewWindow(nil)
+	if err != nil || plat.options != defaultWindowOptions {
+		t.Fatal("native defaults changed")
+	}
+	win.Destroy()
+	for _, value := range []float32{-1, float32(math.NaN()), float32(math.Inf(1))} {
+		if _, err := app.NewWindow(&WindowOptions{Size: geometry.Size{Width: value}}); err == nil || plat.created != 1 {
+			t.Fatal("invalid size allocated window")
+		}
+	}
+}
+
+type centerTestWindow struct {
+	desktopTestWindow
+	area                      geometry.Rectangle
+	areaError                 error
+	areaQueries, moves, shows int
+}
+
+func (w *centerTestWindow) WorkAreaAt(point geometry.Point) (geometry.Rectangle, error) {
+	w.areaQueries++
+	if point != (geometry.Point{}) {
+		return geometry.Rectangle{}, errors.New("initial work area queried away from client origin")
+	}
+	return w.area, w.areaError
+}
+
+func (w *centerTestWindow) SetPosition(reference platform.Window, position geometry.Point) error {
+	w.moves++
+	return w.desktopTestWindow.SetPosition(reference, position)
+}
+
+func (w *centerTestWindow) Show() error {
+	w.shows++
+	return nil
+}
+
+func TestWindowInitialCenter(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		options WindowOptions
+		area    geometry.Rectangle
+		want    geometry.Point
+	}{
+		{"explicit", WindowOptions{Size: geometry.Size{Width: 320, Height: 200}, Center: true}, geometry.Rect(-140, -60, 1920, 1040), geometry.Point{X: 800, Y: 420}},
+		{"default size", WindowOptions{Center: true}, geometry.Rect(-100, -20, 1920, 1040), geometry.Point{X: 560, Y: 220}},
+		{"default axis", WindowOptions{Size: geometry.Size{Width: 320}, Center: true}, geometry.Rect(0, 0, 1920, 1040), geometry.Point{X: 800, Y: 220}},
+		{"fractional DIP", WindowOptions{Size: geometry.Size{Width: 321, Height: 201}, Center: true}, geometry.Rect(-30, -40, 1000, 700), geometry.Point{X: 339.5, Y: 249.5}},
+		{"oversized not clamped", WindowOptions{Size: geometry.Size{Width: 1200, Height: 900}, Center: true}, geometry.Rect(0, 0, 1000, 700), geometry.Point{X: -100, Y: -100}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			native := &centerTestWindow{area: tc.area}
+			plat := &chromeTestPlatform{native: native}
+			app := &application{platform: plat}
+			win, err := app.NewWindow(&tc.options)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(win.Destroy)
+			if native.shows != 0 || native.areaQueries != 1 || native.moves != 1 || native.windowReference != nil || native.windowPosition != tc.want {
+				t.Fatalf("hidden initial placement: shows=%d queries=%d moves=%d reference=%v position=%v want=%v",
+					native.shows, native.areaQueries, native.moves, native.windowReference, native.windowPosition, tc.want)
+			}
+			// No creation SizeEvent: do not depend on the GUI's uninitialized cache.
+			if win.(*window).width != 0 || win.(*window).height != 0 {
+				t.Fatal("initial preference fabricated an observed client size")
+			}
+			want := geometry.Point{X: 120, Y: 80}
+			if err := win.SetPosition(nil, want); err != nil {
+				t.Fatal(err)
+			}
+			for range 2 {
+				if err := win.Show(); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if native.moves != 2 || native.areaQueries != 1 || native.windowPosition != want {
+				t.Fatal("Show reapplied initial centering or overrode explicit placement")
+			}
+		})
+	}
+}
+
+func TestWindowCenterFallbackAndFailures(t *testing.T) {
+	for _, fallback := range []bool{false, true} {
+		native := &centerTestWindow{area: geometry.Rect(0, 0, 1920, 1040)}
+		native.chrome = platform.WindowChromeIntegrated
+		if fallback {
+			native.chrome = platform.WindowChromeNative
+		}
+		plat := &chromeTestPlatform{native: native, unsupportedIntegrated: fallback}
+		app := &application{platform: plat}
+		win, err := app.NewWindow(&WindowOptions{Chrome: WindowChromeIntegrated, Center: true, SkipTaskbar: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if native.moves != 1 || native.windowPosition != (geometry.Point{X: 560, Y: 220}) {
+			t.Fatal("chrome fallback lost or repeated initial placement")
+		}
+		for _, request := range plat.history {
+			if request.Center || !request.SkipTaskbar {
+				t.Fatal("GUI placement policy leaked into native creation options")
+			}
+		}
+		win.Destroy()
+	}
+	for _, tc := range []struct {
+		name   string
+		native platform.Window
+		want   error
+	}{
+		{"not desktop", &chromeTestWindow{}, platform.ErrUnsupported},
+		{"work area", &centerTestWindow{areaError: platform.ErrUnavailable}, platform.ErrUnavailable},
+		{"position", &centerTestWindow{desktopTestWindow: desktopTestWindow{commandError: platform.ErrUnsupported}, area: geometry.Rect(0, 0, 1920, 1040)}, platform.ErrUnsupported},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			app := &application{platform: &chromeTestPlatform{native: tc.native}}
+			win, err := app.NewWindow(&WindowOptions{Center: true})
+			if win != nil || !errors.Is(err, tc.want) || len(app.Windows()) != 0 {
+				t.Fatalf("failed placement returned or registered a window: window=%v err=%v", win, err)
+			}
+			if native, ok := tc.native.(*centerTestWindow); ok && (!native.destroyed || native.shows != 0) {
+				t.Fatal("failed centered creation showed or leaked native window")
+			}
+			if native, ok := tc.native.(*chromeTestWindow); ok && !native.destroyed {
+				t.Fatal("failed non-desktop centered creation leaked window")
+			}
+		})
+	}
+	// A platform without desktop placement still supports the default option.
+	native := &centerTestWindow{areaError: platform.ErrUnsupported}
+	app := &application{platform: &chromeTestPlatform{native: native}}
+	win, err := app.NewWindow(&WindowOptions{Center: false})
+	if err != nil || native.areaQueries != 0 || native.moves != 0 {
+		t.Fatalf("default creation unnecessarily required positioning: %v", err)
+	}
+	win.Destroy()
+}
+
+func TestChromeOrderedQueriesAndHandles(t *testing.T) {
+	win, native := chromeFixture(t, false, true)
+	var order []int
+	p := geometry.Point{X: 20, Y: 20}
+	first := win.Chrome().ConnectQueryRegion(func(got geometry.Point, r *ChromeRegion) {
+		if got != p {
+			t.Fatal("changed client DIP")
+		}
+		order = append(order, 1)
+		*r = ChromeRegionCaption
+	})
+	second := win.Chrome().ConnectQueryRegion(func(_ geometry.Point, r *ChromeRegion) { order = append(order, 2); *r = ChromeRegionClient })
+	third := win.Chrome().ConnectQueryRegion(func(_ geometry.Point, r *ChromeRegion) { order = append(order, 3); *r = ChromeRegionMaximize })
+	if native.hitTest(p) != platform.WindowHitMaximize || !reflect.DeepEqual(order, []int{1, 2, 3}) {
+		t.Fatal("query short-circuited or reordered")
+	}
+	third.Block()
+	if native.hitTest(p) != platform.WindowHitClient {
+		t.Fatal("blocking failed")
+	}
+	third.Unblock()
+	third.Disconnect()
+	third.Disconnect()
+	second.Disconnect()
+	if native.hitTest(p) != platform.WindowHitCaption {
+		t.Fatal("independent disconnect failed")
+	}
+	first.Disconnect()
+	if native.hitTest(p) != platform.WindowHitDefault {
+		t.Fatal("empty query overwrote native edges")
+	}
+}
+
+func TestChromeReentrancyAndDestroy(t *testing.T) {
+	win, native := chromeFixture(t, false, true)
+	service := win.Chrome()
+	query := native.hitTest
+	service.ConnectQueryRegion(func(p geometry.Point, r *ChromeRegion) {
+		if query(p) != platform.WindowHitDefault {
+			t.Fatal("reentrant query did not defer")
+		}
+		*r = ChromeRegionCaption
+	})
+	if query(geometry.Point{}) != platform.WindowHitCaption {
+		t.Fatal("outer query lost")
+	}
+	win.ConnectDestroy(func() {
+		if native.hitTest != nil {
+			t.Error("native callback retained during destroy")
+		}
+	})
+	win.Destroy()
+	if service != win.Chrome() || query(geometry.Point{}) != platform.WindowHitDefault {
+		t.Fatal("stale service")
+	}
+	called := false
+	service.ConnectInfo(func(ChromeInfo) { called = true })
+	if called {
+		t.Fatal("post-destroy callback")
+	}
+}
+
+func TestChromeNativeInfoAndLayout(t *testing.T) {
+	win, native := chromeFixture(t, true, false)
+	service := win.Chrome()
+	var observations []ChromeInfo
+	service.ConnectInfo(func(info ChromeInfo) { observations = append(observations, info) })
+	if len(observations) != 1 || observations[0].Controls != ChromeControlsNative {
+		t.Fatal("missing initial native info")
+	}
+	height := float32(14) // intrinsic height: zero Y is a valid centered origin
+	position := geometry.Point{X: 12}
+	binding := service.ConnectQueryControls(func(r *ChromeControls) { r.Height = height })
+	win.paint()
+	win.paint()
+	if len(native.positions) != 1 || !native.positions[0].HasPosition {
+		t.Fatalf("duplicate/lost origin request: %v", native.positions)
+	}
+	if len(observations) != 2 || observations[1].ControlsBounds.Pos != position {
+		t.Fatal("actual position was not observed")
+	}
+	position = geometry.Point{X: 12, Y: 18}
+	height = 50
+	native.positionError = platform.ErrUnavailable
+	win.paint()
+	win.paint()
+	if len(native.positions) != 2 || win.chrome.info.ControlsBounds.Pos == position {
+		t.Fatal("failure fabricated geometry or retried on every paint")
+	}
+	native.positionError = nil
+	win.chrome.nativeChanged()
+	win.paint()
+	if len(native.positions) != 3 || win.chrome.info.ControlsBounds.Pos != position {
+		t.Fatal("native change did not permit retry")
+	}
+	binding.Disconnect()
+	win.paint()
+	if last := native.positions[len(native.positions)-1]; last.HasPosition {
+		t.Fatal("disconnect did not restore default native placement")
+	}
+	observed := win.chrome.info
+	count := len(observations)
+	native.queryError = platform.ErrUnavailable
+	win.chrome.refresh()
+	if win.chrome.info != observed || len(observations) != count {
+		t.Fatal("temporary native failure changed the public observation")
+	}
+}
+
+func TestChromePreservesInitialNativeHorizontalAnchor(t *testing.T) {
+	win, native := chromeFixture(t, true, false)
+	native.controls.X = 8
+	win.chrome.nativeChanged()
+	win.Chrome().ConnectQueryControls(func(r *ChromeControls) { r.Height = 40 })
+	win.paint()
+	if native.controls.X != 8 || native.controls.Y != 13 {
+		t.Fatalf("native controls moved horizontally: %v", native.controls)
+	}
+	win.paint()
+	if len(native.positions) != 1 {
+		t.Fatal("unchanged header repeatedly repositioned native controls")
+	}
+}
+
+func TestChromeNotificationDestroySkipsLaterCallbacks(t *testing.T) {
+	win, native := chromeFixture(t, true, false)
+	armed := false
+	win.Chrome().ConnectInfo(func(ChromeInfo) {
+		if armed {
+			win.Destroy()
+		}
+	})
+	later := 0
+	win.Chrome().ConnectInfo(func(ChromeInfo) {
+		if armed {
+			later++
+		}
+	})
+	armed = true
+	native.controls.Width++
+	win.chrome.refresh()
+	if later != 0 || !native.destroyed {
+		t.Fatal("notification accessed destroyed owner")
+	}
+}
+
+func TestChromeInvalidHeightAndNativeSizeChanges(t *testing.T) {
+	for _, nativeButtons := range []bool{false, true} {
+		win, native := chromeFixture(t, nativeButtons, !nativeButtons)
+		height := float32(80)
+		win.Chrome().ConnectQueryControls(func(result *ChromeControls) { result.Height = height })
+		win.paint()
+		valid := chromeInfo(win.Chrome())
+		count := len(native.positions)
+		for _, invalid := range []float32{-1, float32(math.NaN()), float32(math.Inf(1))} {
+			height = invalid
+			win.paint()
+			if chromeInfo(win.Chrome()) != valid || len(native.positions) != count {
+				t.Fatal("invalid height changed geometry or reached native positioning")
+			}
+		}
+		height = 80
+		if nativeButtons {
+			native.controls.Height = 20
+			win.chrome.nativeChanged()
+			win.paint()
+			if native.controls.Y != 30 {
+				t.Fatal("native size change was not re-centered")
+			}
+		}
+	}
+}
+
+func TestChromeLayoutSignalOrderAndDestruction(t *testing.T) {
+	win, native := chromeFixture(t, true, false)
+	win.Chrome().ConnectQueryControls(func(r *ChromeControls) {
+		r.Height = 50
+	})
+	last := win.Chrome().ConnectQueryControls(func(r *ChromeControls) {
+		r.Height = 54
+	})
+	win.paint()
+	if native.controls.Pos != (geometry.Point{X: 12, Y: 20}) {
+		t.Fatal("layout signals were not last-writer-wins")
+	}
+	last.Disconnect()
+	win.Chrome().ConnectQueryControls(func(*ChromeControls) { win.Destroy() })
+	called := false
+	win.Chrome().ConnectQueryControls(func(*ChromeControls) { called = true })
+	count := len(native.positions)
+	win.paint()
+	if called || len(native.positions) != count {
+		t.Fatal("layout used destroyed native window")
+	}
+}
+
+func TestChromeMoveCaptureFailureAndReentrantDestroy(t *testing.T) {
+	win, native := chromeFixture(t, false, false)
+	win.Chrome().ConnectQueryRegion(func(_ geometry.Point, r *ChromeRegion) { *r = ChromeRegionCaption })
+	win.dispatcher.captureTarget = win.Widget()
+	clickAt(win, geometry.Point{X: 20, Y: 20})
+	if native.moveRequests != 0 {
+		t.Fatal("move stole existing GUI capture")
+	}
+	native.commandError = platform.ErrUnavailable
+	click := NewClickEventController()
+	clicked := 0
+	click.ConnectClicked(func(EventContext) { clicked++ })
+	win.Widget().AddEventController(click)
+	dragCaptionAt(win, geometry.Point{X: 20, Y: 20})
+	if clicked != 0 || native.moveRequests != 1 {
+		t.Fatal("failed Caption move leaked into ordinary input")
+	}
+	native.commandError = nil
+	native.onMove = win.Destroy
+	dragCaptionAt(win, geometry.Point{X: 20, Y: 20})
+	if !win.destroyed || clicked != 0 {
+		t.Fatal("reentrant native drag used destroyed Widget tree")
+	}
+}
+
+func TestChromeMoveUsesEventController(t *testing.T) {
+	for _, nativeHit := range []bool{true, false} {
+		win, native := chromeFixture(t, false, nativeHit)
+		win.Chrome().ConnectQueryRegion(func(_ geometry.Point, r *ChromeRegion) { *r = ChromeRegionCaption })
+		clicks := 0
+		click := NewClickEventController()
+		click.ConnectClicked(func(EventContext) { clicks++ })
+		win.Widget().AddEventController(click)
+		dragCaptionAt(win, geometry.Point{X: 20, Y: 20})
+		if nativeHit {
+			if native.moveRequests != 0 {
+				t.Fatal("Windows took duplicate move path")
+			}
+		} else if native.moveRequests != 1 || clicks != 0 || click.Pressed() || win.dispatcher.captureTarget != nil {
+			t.Fatal("native move started a GUI click/capture")
+		}
+		win.Destroy()
+	}
+}
+
+// Window 拥有缩放边缘，不依赖应用树在那里命中 Widget。真实输入仍从
+// DispatchEvent 进入 host controller 和既有手势竞争，而不是直接调用 BeginResize。
+func TestIntegratedResizeWithoutWidgetHit(t *testing.T) {
+	for _, content := range []string{"normal", "disabled", "empty"} {
+		t.Run(content, func(t *testing.T) {
+			win, native := chromeFixture(t, false, false)
+			win.clientChrome = true
+			win.Chrome().ConnectQueryRegion(win.chrome.queryFrameRegion)
+			clicks := 0
+			click := NewClickEventController()
+			click.ConnectClicked(func(EventContext) { clicks++ })
+			win.Widget().AddEventController(click)
+			if content == "empty" {
+				win.SetWidget(nil)
+			} else if content == "disabled" {
+				win.Widget().SetEnabled(false)
+			}
+			win.RequestLayout()
+			win.paint()
+			points := []geometry.Point{{X: 100, Y: 2}, {X: 100, Y: 398}, {X: 2, Y: 100}, {X: 638, Y: 100}, {X: 2, Y: 2}, {X: 638, Y: 2}, {X: 2, Y: 398}, {X: 638, Y: 398}}
+			for i, point := range points {
+				if target := win.dispatcher.pick(win.Widget(), point); target != nil {
+					t.Fatalf("resize perimeter hit a Widget: %v", target)
+				}
+				_ = win.DispatchEvent(events.PointerEvent{EventType: events.PointerDown, Position: point, Button: events.PointerButtonLeft, Buttons: events.PointerButtonLeftDown})
+				_ = win.DispatchEvent(events.PointerEvent{EventType: events.PointerUp, Position: point, Button: events.PointerButtonLeft})
+				if len(native.resizeRequests) != i+1 || native.resizeRequests[i] != platform.WindowEdge(i) || clicks != 0 || win.dispatcher.gesture != nil {
+					t.Fatalf("edge=%d: requests=%v, clicks=%d", i, native.resizeRequests, clicks)
+				}
+			}
+			native.onMove = win.Destroy
+			_ = win.DispatchEvent(events.PointerEvent{EventType: events.PointerDown, Position: points[0], Button: events.PointerButtonLeft, Buttons: events.PointerButtonLeftDown})
+			if !win.destroyed || win.dispatcher.gesture != nil {
+				t.Fatal("native resize reentry did not safely destroy the host")
+			}
+		})
+	}
+}
+
+func TestChromeSecondPressChoosesDragOrDoubleClickOnRelease(t *testing.T) {
+	win, native := chromeFixture(t, false, false)
+	now := time.Unix(100, 0)
+	win.dispatcher.hostController.(*chromeInteractionController).now = func() time.Time { return now }
+	win.Chrome().ConnectQueryRegion(func(_ geometry.Point, r *ChromeRegion) { *r = ChromeRegionCaption })
+	point := geometry.Point{X: 20, Y: 20}
+	clickAt(win, point)
+	now = now.Add(100 * time.Millisecond)
+	dragCaptionAt(win, point)
+	if native.moveRequests != 1 || len(native.requests) != 0 {
+		t.Fatalf("second press drag: move=%d state=%v", native.moveRequests, native.requests)
+	}
+	now = now.Add(100 * time.Millisecond)
+	clickAt(win, point)
+	now = now.Add(100 * time.Millisecond)
+	clickAt(win, point)
+	if len(native.requests) != 1 || native.requests[0] != WindowStateMaximized {
+		t.Fatalf("double click should request maximize on release: %v", native.requests)
+	}
+}
+
+func TestChromeDoesNotCountWidgetClickAsCaptionClick(t *testing.T) {
+	win, native := chromeFixture(t, false, false)
+	now := time.Unix(100, 0)
+	win.dispatcher.hostController.(*chromeInteractionController).now = func() time.Time { return now }
+	win.Chrome().ConnectQueryRegion(func(_ geometry.Point, r *ChromeRegion) { *r = ChromeRegionCaption })
+	child := newTestWidget()
+	child.Arrange(geometry.Rect(0, 0, 40, 40))
+	win.Widget().base().AddChild(win.Widget(), child)
+	click := NewClickEventController()
+	child.AddEventController(click)
+	clicked := 0
+	click.ConnectClicked(func(EventContext) { clicked++ })
+	clickAt(win, geometry.Point{X: 20, Y: 20})
+	now = now.Add(100 * time.Millisecond)
+	clickAt(win, geometry.Point{X: 100, Y: 20})
+	if clicked != 1 || len(native.requests) != 0 {
+		t.Fatalf("widget click leaked into caption history: clicked=%d requests=%v", clicked, native.requests)
+	}
+}
+
+func TestDisabledChromeIsInert(t *testing.T) {
+	win := &window{platformWindow: &chromeTestWindow{}}
+	defer win.Destroy()
+	service := win.Chrome()
+	info := chromeInfo(service)
+	if info.Enabled || info.Controls != ChromeControlsNone {
+		t.Fatal("disabled service is not empty")
+	}
+	called := false
+	connections := signal.Handles{
+		service.ConnectQueryRegion(func(geometry.Point, *ChromeRegion) { called = true }),
+		service.ConnectQueryControls(func(*ChromeControls) { called = true }),
+	}
+	win.chrome.queryRegion(geometry.Point{})
+	win.chrome.beforeLayout()
+	win.chrome.afterLayout()
+	connections.Disconnect()
+	if called {
+		t.Fatal("disabled service emitted native queries")
+	}
+}
+
+func TestWindowChromeKeepsCloseVeto(t *testing.T) {
+	native := &chromeTestWindow{}
+	win := &window{platformWindow: native}
+	h := win.ConnectCloseRequest(func(allow *bool) { *allow = false })
+	_ = win.DispatchEvent(events.CloseEvent{})
+	if native.destroyed {
+		t.Fatal("close veto bypassed")
+	}
+	h.Disconnect()
+	_ = win.DispatchEvent(events.CloseEvent{})
+	if !native.destroyed {
+		t.Fatal("accepted close ignored")
+	}
+}

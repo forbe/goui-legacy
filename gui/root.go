@@ -1,0 +1,340 @@
+package gui
+
+import (
+	"fmt"
+	"image"
+	"log"
+	"math"
+	"time"
+
+	"github.com/golang-gui/goui/core/geometry"
+	"github.com/golang-gui/goui/core/signal"
+	"github.com/golang-gui/goui/layout"
+	"github.com/golang-gui/goui/platform"
+	"github.com/golang-gui/goui/platform/graphics"
+	"github.com/golang-gui/goui/style"
+)
+
+// Root is the host a widget lives in — a window or a popover. Widgets reach it
+// via Root() and depend only on this interface, never on the concrete host type.
+type Root interface {
+	Widget() Widget
+	RequestPaint() error
+	RequestLayout()
+	// ConnectFrame observes a GUI-thread update before layout and painting.
+	// Connecting does not request drawing; request the first and subsequent
+	// frames with RequestPaint. The timestamp is shared by all frame listeners.
+	ConnectFrame(func(time.Time)) signal.Handle
+}
+
+// paintRequester is the native surface capability a host notifies to schedule
+// a repaint (platform.Window and platform.Popup both provide it).
+type paintRequester interface {
+	RequestPaint() error
+}
+
+// rootBase is the common internal state of every widget host (window, popover):
+// frame, input, drag-and-drop and the current native surface. Each host embeds
+// its own instance; native window and popover policy remains in those hosts.
+type rootBase struct {
+	app            *application
+	dispatcher     EventDispatcher
+	drag           dragHostState
+	dragTarget     dragTargetState
+	dragMotion     dragMotionState
+	surfaceEpoch   uint64 // invalidates callbacks from a replaced native surface
+	surface        platform.Surface
+	transparent    bool // immutable native surface configuration, not its style
+	painter        graphics.Painter
+	width          float32 // logical (DIP)
+	height         float32 // logical (DIP)
+	pixelWidth     float32 // physical (backing) pixels
+	pixelHeight    float32 // physical (backing) pixels
+	layoutDirty    bool
+	paintDirty     bool
+	focusedWidget  Widget
+	focusVisible   bool // input-managed keyboard hint mode, independent per host
+	frames         signal.Signal1[time.Time]
+	framePainting  bool
+	framePending   bool
+	frameSuspended bool
+	frameDestroyed bool
+	frameEpoch     uint64
+	lastFrame      time.Time
+	frameTimer     *Timer
+	frameRequester paintRequester
+}
+
+func (b *rootBase) rootState() *rootBase { return b }
+
+func (b *rootBase) cancelInput(reason GestureCancelReason) {
+	b.clearDragMotion()
+	b.dispatcher.cancelInput(reason)
+	state := b.dragTarget
+	b.leaveDragTarget()
+	if state.reading && state.offer != nil {
+		_ = state.offer.Finish(0)
+	}
+}
+
+func (b *rootBase) Transparent() bool { return b.transparent }
+
+// FocusedWidget returns the widget holding keyboard focus, or nil.
+func (b *rootBase) FocusedWidget() Widget { return b.focusedWidget }
+
+// adoptWidget migrates widget into newRoot: it emits the unmount notification
+// on the old root, clears the old root's focus if the widget subtree holds it,
+// detaches the widget from its previous parent chain and mounts it under
+// newRoot. window.SetWidget and popover.SetWidget share this migration
+// semantics.
+func adoptWidget(widget Widget, newRoot Root) {
+	oldRoot := widget.Root()
+	if oldRoot != nil {
+		widget.base().emitUnmountSubtree(widget)
+		if h, ok := oldRoot.(EventTarget); ok && focusWithin(h, widget.base()) {
+			h.SetFocusedWidget(nil)
+		}
+	}
+	widget.base().detach(widget)
+	widget.base().attachRoot(newRoot, widget)
+}
+
+// requestLayout schedules a relayout of the next frame.
+func (b *rootBase) requestLayout(platform paintRequester) {
+	b.layoutDirty = true
+	b.requestPaint(platform)
+}
+
+// paintFrame runs one layout + paint frame for the host's content. The dirty
+// flags are consumed *before* the work: layout and painting may issue new
+// requests (e.g. a virtualized ListView measures its items during Arrange and
+// requests a relayout), and those must survive to schedule the next frame
+// instead of being cleared here.
+func (b *rootBase) paintFrame(content Widget, background style.Style) {
+	if b.painter == nil || !b.beginFrame() {
+		return
+	}
+	defer b.endFrame()
+	b.layoutFrame(content)
+	b.drawFrame(content, background)
+}
+
+// layoutFrame is shared by windows and popovers. Windows seed controls bounds
+// first, query the row height afterwards, and may apply one reservation pass.
+func (b *rootBase) layoutFrame(content Widget) {
+	b.layoutFrameIn(content, geometry.Rect(0, 0, b.width, b.height))
+}
+
+// layoutFrameIn lets a host reserve its own perimeter without wrapping the
+// user's root or changing Widget-local coordinates. Popovers use the full frame.
+func (b *rootBase) layoutFrameIn(content Widget, bounds geometry.Rectangle) {
+	if content == nil {
+		b.layoutDirty = false
+		return
+	}
+	if b.layoutDirty {
+		b.layoutDirty = false
+		measureWidget(content, layout.Tight(bounds.Size)) // hosts are extrinsic: content fills them
+		content.Arrange(bounds)
+	}
+}
+
+func (b *rootBase) drawFrame(content Widget, background style.Style, decorations ...Widget) {
+	b.drawDecoratedFrame(content, background, style.Style{}, 0, decorations...)
+}
+
+func (b *rootBase) frameScale() float32 {
+	if b.width > 0 && b.pixelWidth > 0 {
+		return b.pixelWidth / b.width
+	}
+	return 1
+}
+
+func (b *rootBase) drawDecoratedFrame(content Widget, background, border style.Style, inset float32, decorations ...Widget) {
+	body := geometry.Rect(0, 0, b.width, b.height)
+	safe := geometry.Rect(inset, inset, max(0, b.width-2*inset), max(0, b.height-2*inset))
+	b.drawSurfaceFrame(content, background, border, body, safe, graphics.BoxShadow{}, decorations...)
+}
+
+// Hosts supply geometry; the frame renderer knows neither menu nor chrome policy.
+func (b *rootBase) drawSurfaceFrame(content Widget, background, border style.Style, body, safe geometry.Rectangle, shadow graphics.BoxShadow, decorations ...Widget) {
+	if b.painter == nil {
+		return
+	}
+	size := geometry.Size{Width: b.width, Height: b.height}
+	// Begin takes the physical (backing) pixel size; scale = physical / logical.
+	pixelWidth, pixelHeight := b.pixelWidth, b.pixelHeight
+	scale := b.frameScale()
+	if b.width <= 0 || b.pixelWidth <= 0 {
+		pixelWidth, pixelHeight = size.Width, size.Height
+	}
+
+	bounds := geometry.Rect(0, 0, size.Width, size.Height)
+	guiPainter := newPainter(b.painter, bounds, scale)
+	b.painter.Begin(pixelWidth, pixelHeight, scale)
+	defer b.painter.End()
+	// Initialize storage independently of the visible body background. Opaque
+	// surfaces use black for uncovered pixels; alpha surfaces use transparent zero.
+	clearColor := graphics.Color{}
+	if !b.transparent {
+		clearColor.A = 1
+	}
+	b.painter.Clear(clearColor)
+	guiPainter.applyState()
+	radius, _ := border.Radius()
+	if shadow.Color.A > 0 && body.Width > 0 && body.Height > 0 {
+		b.painter.DrawBoxShadow(body, radius, shadow)
+	}
+	// Only the host background reaches the rounded perimeter. The host supplies
+	// content allocations; structural clipping also contains custom painting.
+	if bg, ok := background.BackgroundColor(); ok && bg != nil {
+		radius = min(normalizeLayoutValue(radius), max(0, min(body.Width, body.Height)/2))
+		if radius > 0 {
+			guiPainter.FillRoundRect(body, radius, graphics.ColorOf(bg))
+		} else {
+			guiPainter.FillRect(body, graphics.ColorOf(bg))
+		}
+	}
+	guiPainter.state.scopeClip, guiPainter.state.clip = safe, safe
+	guiPainter.applyState()
+	if !emptyRect(safe) {
+		paintWidget(content, guiPainter)
+		for _, decoration := range decorations {
+			paintWidget(decoration, guiPainter)
+		}
+	}
+	guiPainter.state.scopeClip, guiPainter.state.clip = bounds, bounds
+	guiPainter.applyState()
+	paintStyledBorder(guiPainter, body, border)
+}
+
+func (b *rootBase) renderWidgetImage(widget Widget, scale float32) (image.Image, error) {
+	if b.painter == nil {
+		return nil, fmt.Errorf("gui: render widget without a painter")
+	}
+	if scale == 0 {
+		scale = b.frameScale()
+	}
+	rect := widget.Rect()
+	w, h := math.Ceil(float64(rect.Width)*float64(scale)), math.Ceil(float64(rect.Height)*float64(scale))
+	if scale <= 0 || math.IsNaN(w) || math.IsNaN(h) || w <= 0 || h <= 0 || w > 16384 || h > 16384 {
+		return nil, fmt.Errorf("gui: invalid widget render size or scale")
+	}
+	return b.painter.RenderImage(int(w), int(h), scale, func() {
+		p := newPainter(b.painter, geometry.Rect(0, 0, rect.Width, rect.Height), scale)
+		// Cancel only this root's parent-relative position. Descendants keep
+		// their ordinary local allocations and structural clips.
+		p.state.offset = geometry.Point{X: -rect.X, Y: -rect.Y}
+		paintWidget(widget, p)
+	})
+}
+
+const frameInterval = time.Second / 60
+
+// ConnectFrame observes updates before layout and paint on the GUI thread.
+// Connecting does not request a frame. RenderWidget does not emit this signal.
+func (b *rootBase) ConnectFrame(fn func(time.Time)) signal.Handle {
+	if b.frameDestroyed {
+		return signal.Handles(nil)
+	}
+	return b.frames.Connect(func(now time.Time) {
+		if !b.frameDestroyed && !b.frameSuspended && b.surfaceEpoch == b.frameEpoch {
+			fn(now)
+		}
+	})
+}
+
+func (b *rootBase) requestPaint(native paintRequester) error {
+	b.paintDirty = true
+	b.frameRequester = native
+	if native == nil || b.frameDestroyed || b.frameSuspended || b.framePainting || b.framePending {
+		return nil
+	}
+	if b.frameTimer != nil && b.frameTimer.Active() {
+		return nil
+	}
+	delay := b.lastFrame.Add(frameInterval).Sub(b.frameNow())
+	if delay > 0 && b.app != nil && b.app.timers != nil {
+		if b.frameTimer == nil {
+			b.frameTimer = b.app.NewTimer()
+			b.frameTimer.ConnectTimeout(func() {
+				if err := b.submitFrame(); err != nil {
+					log.Printf("goui: request frame: %v", err)
+				}
+			})
+		}
+		return b.frameTimer.StartOnce(delay)
+	}
+	return b.submitFrame()
+}
+
+func (b *rootBase) frameNow() time.Time {
+	if b.app != nil && b.app.timers != nil {
+		return b.app.timers.now()
+	}
+	return time.Now()
+}
+
+func (b *rootBase) submitFrame() error {
+	if !b.paintDirty || b.frameDestroyed || b.frameSuspended || b.frameRequester == nil {
+		return nil
+	}
+	b.framePending = true
+	if err := b.frameRequester.RequestPaint(); err != nil {
+		b.framePending = false
+		return err
+	}
+	return nil
+}
+
+func (b *rootBase) beginFrame() bool {
+	if b.frameDestroyed || b.frameSuspended {
+		return false
+	}
+	if b.framePainting {
+		b.paintDirty = true
+		return false
+	}
+	b.stopFrameTimer()
+	b.framePending, b.paintDirty = false, false
+	b.framePainting = true
+	b.lastFrame, b.frameEpoch = b.frameNow(), b.surfaceEpoch
+	b.frames.Emit(b.lastFrame)
+	if b.frameDestroyed || b.frameSuspended || b.surfaceEpoch != b.frameEpoch {
+		b.endFrame()
+		return false
+	}
+	return true
+}
+
+func (b *rootBase) endFrame() {
+	b.framePainting = false
+	if b.paintDirty && !b.frameDestroyed && !b.frameSuspended {
+		if err := b.requestPaint(b.frameRequester); err != nil {
+			log.Printf("goui: request frame: %v", err)
+		}
+	}
+}
+
+func (b *rootBase) stopFrameTimer() {
+	if b.frameTimer != nil {
+		b.frameTimer.Stop()
+	}
+}
+
+func (b *rootBase) suspendFrames() {
+	b.frameSuspended = true
+	b.framePending = false
+	b.stopFrameTimer()
+}
+
+func (b *rootBase) resumeFrames(native paintRequester) {
+	b.frameSuspended = false
+	_ = b.requestPaint(native)
+}
+
+func (b *rootBase) destroyFrames() {
+	b.frameDestroyed = true
+	b.suspendFrames()
+	b.frameRequester = nil
+}

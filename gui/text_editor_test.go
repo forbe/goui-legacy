@@ -1,0 +1,1319 @@
+package gui
+
+import (
+	"fmt"
+	"image/color"
+	"runtime"
+	"strings"
+	"testing"
+	"unicode/utf8"
+
+	"github.com/golang-gui/goui/core/colors"
+	"github.com/golang-gui/goui/core/geometry"
+	"github.com/golang-gui/goui/gui/textedit"
+	"github.com/golang-gui/goui/layout"
+	"github.com/golang-gui/goui/mlang"
+	"github.com/golang-gui/goui/platform"
+	"github.com/golang-gui/goui/platform/events"
+	"github.com/golang-gui/goui/platform/graphics/software"
+	"github.com/golang-gui/goui/platform/typography"
+	"github.com/golang-gui/goui/style"
+)
+
+func TestTextEditorDisabledPreservesContentAndRejectsLateInput(t *testing.T) {
+	editor, win, _ := newEditorFixture(t, "abc")
+	editor.SetSelection(TextSelection{Anchor: 1, Caret: 2})
+	selection := editor.Selection()
+	clip := &editorClipboard{}
+	App.(*application).clipboard = clip
+	editor.paste()
+	if clip.pending == nil {
+		t.Fatal("paste did not request clipboard")
+	}
+	editor.onPreedit("候选", 1)
+	if editor.preedit == nil {
+		t.Fatal("preedit setup failed")
+	}
+	editor.SetEnabled(false)
+	if editor.Model().Text() != "abc" || editor.Selection() != selection || editor.preedit != nil || win.FocusedWidget() != nil || editor.imContext() != nil {
+		t.Fatal("disable changed content or retained active editing")
+	}
+	editor.onCommit(IMCommit{Text: "late"})
+	editor.onPreedit("late", 0)
+	if editor.Model().Text() != "abc" || editor.preedit != nil || editor.canEditCommand(textSelectAll) {
+		t.Fatal("disabled editor accepted native input or menu command")
+	}
+	editor.SetEnabled(true)
+	clip.pending("stale", nil)
+	if editor.Model().Text() != "abc" || win.FocusedWidget() != nil {
+		t.Fatal("reenable accepted old paste or stole focus")
+	}
+	editor.SetReadOnly(true)
+	if !win.SetFocusedWidget(editor) || !editor.canEditCommand(textSelectAll) {
+		t.Fatal("read-only was confused with disabled")
+	}
+	editor.SetEnabled(false)
+	editor.Model().SetText("programmatic")
+	if editor.Model().Text() != "programmatic" || editor.Snapshot().Enabled {
+		t.Fatal("disabled editor rejected programmatic synchronization")
+	}
+}
+
+func TestTextEditorDisableDuringSelectionNormalizationStopsCommit(t *testing.T) {
+	for _, reenable := range []bool{false, true} {
+		t.Run(fmt.Sprintf("reenable=%t", reenable), func(t *testing.T) {
+			editor, _, _ := newEditorFixture(t, "e\u0301x")
+			// A changed shaping boundary can leave a rune-aligned selection
+			// inside a cluster until the next editing command normalizes it.
+			paragraph := editor.paragraph(0)
+			metrics := paragraph.layout.(*testTextLayout)
+			metrics.clusters = []typography.TextCluster{
+				{Start: 0, Length: 3, Width: 10, Height: 20},
+				{Start: 3, Length: 1, X: 10, Width: 10, Height: 20},
+			}
+			paragraph.geometryValid = false
+			editor.selection = TextSelection{Anchor: 1, Caret: 1}
+			normalizations := 0
+			editor.ConnectSelection(func(TextSelection) {
+				normalizations++
+				editor.SetEnabled(false)
+				if reenable {
+					editor.SetEnabled(true)
+				}
+			})
+			editor.onCommit(IMCommit{Text: "late"})
+			if normalizations != 1 || editor.Model().Text() != "e\u0301x" {
+				t.Fatal("commit continued after selection callback disabled the editor")
+			}
+		})
+	}
+}
+
+type editorResetIM struct {
+	IMContext
+	onReset func()
+}
+
+func (c *editorResetIM) Reset() { c.onReset() }
+
+func TestTextEditorDisabledResetStopsAfterIMEReentry(t *testing.T) {
+	editor, win, _ := newEditorFixture(t, "abc")
+	win.SetFocusedWidget(nil) // Exercise the controller cleanup, not focus exit.
+	editor.onPreedit("候选", 1)
+	resets := 0
+	editor.im = &editorResetIM{IMContext: editor.im, onReset: func() {
+		resets++
+		editor.SetEnabled(true)
+		// A synchronous callback owns the new state. Stale cleanup must not
+		// restart its caret or break the new editing session's undo group.
+		editor.caretVisible = false
+	}}
+	editor.SetEnabled(false)
+	if resets != 1 || !IsEnabled(editor) || editor.preedit != nil || editor.caretVisible {
+		t.Fatal("disabled-input cleanup continued after IME callback reenabling")
+	}
+}
+
+func TestTextEditorCommandModifierIsNotSuper(t *testing.T) {
+	for _, modifier := range []events.Modifiers{events.ModifierControl, events.ModifierCommand, events.ModifierSuper, events.ModifierWin, events.ModifierOption, textCommandModifier() | events.ModifierOption, textCommandModifier() | events.ModifierAlt} {
+		editor, win, _ := newEditorFixture(t, "abc")
+		editorKey(t, win, events.KeyA, modifier)
+		want := TextSelection{}
+		if runtime.GOOS == "darwin" && modifier == events.ModifierCommand || runtime.GOOS != "darwin" && modifier == events.ModifierControl {
+			want = TextSelection{0, 3}
+		}
+		if editor.Selection() != want {
+			t.Fatalf("modifier %v: selection %+v, want %+v", modifier, editor.Selection(), want)
+		}
+	}
+}
+
+func TestTextEditorCommandRejectsExtraModifiers(t *testing.T) {
+	for _, extra := range []events.Modifiers{events.ModifierAltGraph, events.ModifierWin, events.ModifierSuper, 1 << 15} {
+		event := events.KeyEvent{EventType: events.KeyDown, Key: events.KeyA, Modifiers: textCommandModifier() | extra}
+		if textCommand(event.Modifiers) || cancelsTextPreedit(event) {
+			t.Fatalf("extra modifier %v interpreted as editing command", extra)
+		}
+		editor, win, _ := newEditorFixture(t, "abc")
+		editorKey(t, win, event.Key, event.Modifiers)
+		if editor.Selection() != (TextSelection{}) {
+			t.Fatal("extra modifier unexpectedly selected all text")
+		}
+		if (KeyGesture{Key: KeyA, Modifiers: ModPrimary}).Matches(event) {
+			t.Fatal("extra modifier unexpectedly matched shortcut")
+		}
+	}
+}
+
+// 共用排版、剪贴板替身与事件入口。
+
+// Fixture typography has 10 DIP cells and 20 DIP lines. It is deliberately
+// independent of editor geometry; shaping/bidi contracts have separate tests.
+type editorTypography struct{ testTypography }
+
+func (c *editorTypography) NewTextLayout(text string, format typography.TextFormat, width, height float32) (typography.TextLayout, error) {
+	l, _ := c.testTypography.NewTextLayout(text, format, width, height)
+	p := l.(*testTextLayout)
+	p.resized = func() { layoutEditorFixture(p) }
+	layoutEditorFixture(p)
+	return p, nil
+}
+
+func layoutEditorFixture(p *testTextLayout) {
+	text, format, width := p.text, p.format, p.width
+	p.lines, p.clusters = nil, nil
+	line := typography.TextLine{Height: 20, Baseline: 15}
+	x, y := float32(0), float32(0)
+	for offset, r := range text {
+		if x+10 > width && x > 0 && format.WrapMode != WrapNone {
+			line.Length = offset - line.Start
+			line.Width = x
+			p.lines = append(p.lines, line)
+			x, y = 0, y+20
+			line = typography.TextLine{Start: offset, Y: y, Height: 20, Baseline: y + 15}
+		}
+		cluster := typography.TextCluster{Start: offset, Length: utf8.RuneLen(r), X: x, Y: y, Width: 10, Height: 20, LineIndex: len(p.lines)}
+		p.clusters = append(p.clusters, cluster)
+		x += 10
+	}
+	line.Length = len(text) - line.Start
+	line.Width = x
+	p.lines = append(p.lines, line)
+	p.measureSize = geometry.Size{Width: x, Height: y + 20}
+}
+
+func newEditorFixture(t *testing.T, text string) (*TextView, *window, *editorTypography) {
+	t.Helper()
+	typo := &editorTypography{}
+	setTestApplication(t, typo)
+	editor := NewTextView()
+	editor.SetModel(NewTextModel(text))
+	win := &window{}
+	win.SetWidget(editor)
+	editor.Arrange(geometry.Rect(0, 0, 209, 108))
+	win.SetFocusedWidget(editor)
+	t.Cleanup(func() { win.SetWidget(nil) })
+	return editor, win, typo
+}
+
+func TestTextInputFocusVisibleKeepsOwnBorder(t *testing.T) {
+	for _, scale := range []float32{1, 2} {
+		t.Run(fmt.Sprintf("%gx", scale), func(t *testing.T) {
+			_, win, _ := newEditorFixture(t, "")
+			backend, err := software.NewPainter(&widgetRenderSurface{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer backend.Destroy()
+			win.painter = backend
+			input := NewTextInput()
+			win.SetWidget(input)
+			defer win.SetWidget(nil)
+			input.Arrange(geometry.Rect(0, 0, 80, 30))
+			border := color.RGBA{R: 70, G: 130, B: 220, A: 255}
+			App.SetStyleSheet(style.Sheet(append(DefaultStyleRules(),
+				style.Name("text-input").State(style.Focused).BorderColor(border).BorderWidth(2),
+				// Deliberately conflicting rules must not add a second focus pass
+				// or replace the editor's existing Focused border.
+				style.Name("text-input").State(style.FocusVisible).BorderColor(color.Black).BorderWidth(6),
+				style.Name("text-input").Part("focus").State(style.FocusVisible).BorderColor(color.Black).BorderWidth(6),
+			)...))
+			win.SetFocusedWidget(input)
+			for _, keyboard := range []bool{false, true} {
+				if keyboard {
+					editorKey(t, win, events.KeyTab, 0)
+				}
+				if input.FocusVisible() != keyboard {
+					t.Fatalf("unexpected input mode: keyboard=%v hint=%v", keyboard, input.FocusVisible())
+				}
+				img, err := RenderWidget(input, scale)
+				if err != nil {
+					t.Fatal(err)
+				}
+				// Straight top edge at 0/1 DIP must be exactly the opaque 2 DIP
+				// editor border; 2 DIP and the center must stay white. No glyphs,
+				// corners or caret are sampled; premultiplied sRGB bytes, no tolerance.
+				for _, y := range []int{0, 1, 2, 15} {
+					want := border
+					if y >= 2 {
+						want = color.RGBA{R: 255, G: 255, B: 255, A: 255}
+					}
+					got := color.RGBAModel.Convert(img.At(40*int(scale), y*int(scale))).(color.RGBA)
+					if got != want {
+						t.Fatalf("keyboard=%v y=%d DIP pixel=%v want=%v", keyboard, y, got, want)
+					}
+				}
+			}
+		})
+	}
+}
+
+func editorKey(t *testing.T, win *window, key events.Key, modifiers events.Modifiers) {
+	t.Helper()
+	if err := win.DispatchEvent(events.KeyEvent{EventType: events.KeyDown, Key: key, Modifiers: modifiers}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Context menus use the real dispatcher, PopoverMenu and menu row controllers;
+// only the native surface, typography and clipboard are replaced (no desktop).
+func newEditorMenuFixture(t *testing.T, singleLine bool) (*textEditor, *window, *placementPlatform, *editorClipboard) {
+	t.Helper()
+	view, win, _ := newEditorFixture(t, "abcdef")
+	editor := view.textEditor
+	if singleLine {
+		input := NewTextInput()
+		input.SetText("abcdef")
+		win.SetWidget(input)
+		input.Arrange(geometry.Rect(0, 0, 209, 32))
+		win.SetFocusedWidget(input)
+		editor = input.textEditor
+	}
+	clip := &editorClipboard{}
+	plat := &placementPlatform{syncSize: true}
+	App.(*application).platform = plat
+	App.(*application).clipboard = clip
+	win.platformWindow = &placementWindow{area: geometry.Rect(0, 0, 800, 600)}
+	return editor, win, plat, clip
+}
+
+func editorMenuOpen(t *testing.T, editor *textEditor, win *window) *PopoverMenu {
+	t.Helper()
+	editorKey(t, win, events.KeyF10, events.ModifierShift)
+	if editor.contextMenu == nil || !editor.contextMenu.popup.Visible() {
+		t.Fatal("Shift+F10 did not open the context menu")
+	}
+	pm := editor.contextMenu.popup
+	settlePlacement(t, pm.popover.(*popover))
+	return pm
+}
+
+func editorMenuClick(t *testing.T, pm *PopoverMenu, label string) {
+	t.Helper()
+	p := pm.popover.(*popover)
+	settlePlacement(t, p)
+	for _, widget := range pm.content.list.items {
+		row := widget.(*menuItemRow)
+		if row.mi.Label() != label {
+			continue
+		}
+		pos := absOrigin(row)
+		pos.X += row.Rect().Width / 2
+		pos.Y += row.Rect().Height / 2
+		for _, kind := range []events.EventType{events.PointerDown, events.PointerUp} {
+			if err := p.DispatchEvent(events.PointerEvent{EventType: kind, Position: pos, Button: events.PointerButtonLeft}); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return
+	}
+	t.Fatalf("menu item %q is not visible", label)
+}
+
+func TestTextEditorContextMenuCommands(t *testing.T) {
+	for _, singleLine := range []bool{false, true} {
+		for _, command := range []string{"Undo", "Redo", "Cut", "Copy", "Paste", "Delete", "Select All"} {
+			t.Run(fmt.Sprintf("single=%t/%s", singleLine, command), func(t *testing.T) {
+				editor, win, _, clip := newEditorMenuFixture(t, singleLine)
+				editor.setSelectionValue(TextSelection{1, 4})
+				if command == "Undo" || command == "Redo" {
+					editor.im.emitCommit(IMCommit{Text: "XY"})
+					if command == "Redo" {
+						editorKey(t, win, events.KeyZ, textCommandModifier())
+					}
+				}
+				pm := editorMenuOpen(t, editor, win)
+				if clip.pending != nil {
+					t.Fatal("opening a context menu read clipboard text")
+				}
+				editorMenuClick(t, pm, command)
+				if pm.Visible() || win.modalTarget != nil || win.FocusedWidget() != editor.owner {
+					t.Fatal("activation did not dismiss modal menu and retain editor focus")
+				}
+				want := "abcdef"
+				switch command {
+				case "Cut", "Delete":
+					want = "aef"
+				case "Redo":
+					want = "aXYef"
+				case "Paste":
+					if clip.pending == nil {
+						t.Fatal("paste did not request clipboard")
+					}
+					clip.pending("X\nY", nil)
+					want = "aX\nYef"
+					if singleLine {
+						want = "aX Yef"
+					}
+				}
+				if got := editor.model.Text(); got != want {
+					t.Fatalf("text=%q, want %q", got, want)
+				}
+				if (command == "Cut" || command == "Copy") && clip.text != "bcd" {
+					t.Fatalf("clipboard=%q, want bcd", clip.text)
+				}
+				if command == "Select All" && editor.selection != (TextSelection{0, 6}) {
+					t.Fatal("menu did not select all")
+				}
+				if command == "Cut" || command == "Delete" || command == "Paste" {
+					editorKey(t, win, events.KeyZ, textCommandModifier())
+					if editor.model.Text() != "abcdef" || editor.selection != (TextSelection{1, 4}) {
+						t.Fatal("menu operation was not one undoable edit with selection restore")
+					}
+				}
+			})
+		}
+	}
+}
+
+func TestTextEditorContextMenuLanguageAndLifecycle(t *testing.T) {
+	previous := mlang.Language()
+	t.Cleanup(func() { _ = mlang.SetLanguage(previous) })
+	_ = mlang.SetLanguage("en")
+	editor, win, _, clip := newEditorMenuFixture(t, false)
+	editor.setSelectionValue(TextSelection{Anchor: 1, Caret: 4})
+	pm := editorMenuOpen(t, editor, win)
+	copyItem := editor.contextMenu.items[textCopy]
+	model := pm.Menu()
+	for _, tc := range []struct{ tag, copy string }{
+		{"zh-CN", "复制"}, {"ja", "コピー"}, {"ko", "복사"}, {"de", "Kopieren"},
+		{"fr", "Copier"}, {"ru", "Копировать"}, {"ar", "نسخ"},
+	} {
+		if err := mlang.SetLanguage(tc.tag); err != nil {
+			t.Fatal(err)
+		}
+		settlePlacement(t, pm.popover.(*popover))
+		if !pm.Visible() || pm.Menu() != model || editor.contextMenu.items[textCopy] != copyItem ||
+			copyItem.Label() != tc.copy || editor.selection != (TextSelection{Anchor: 1, Caret: 4}) || editor.model.Text() != "abcdef" {
+			t.Fatalf("%s: translation recreated menu or changed editor state", tc.tag)
+		}
+	}
+	editorMenuClick(t, pm, "نسخ") // normal pointer dispatch still executes Copy
+	if clip.text != "bcd" || pm.Visible() || win.FocusedWidget() != editor.owner {
+		t.Fatal("translated item lost command or focus semantics")
+	}
+	owner := editor.owner
+	win.SetWidget(nil)
+	if editor.contextMenu.language != nil {
+		t.Fatal("unmount retained the language connection")
+	}
+	_ = mlang.SetLanguage("ja")
+	if copyItem.Label() != "نسخ" {
+		t.Fatal("unmounted editor reacted to a language change")
+	}
+	win.SetWidget(owner)
+	owner.Arrange(geometry.Rect(0, 0, 209, 108))
+	win.SetFocusedWidget(owner)
+	pm = editorMenuOpen(t, editor, win)
+	if editor.contextMenu.language == nil || editor.contextMenu.items[textCopy].Label() != "コピー" {
+		t.Fatal("remount did not reconnect or read the current language")
+	}
+	_ = mlang.SetLanguage("zh-CN")
+	if !pm.Visible() || editor.contextMenu.items[textCopy].Label() != "复制" {
+		t.Fatal("remounted menu did not translate live")
+	}
+}
+
+func TestTextEditorContextMenuPointerAndDismiss(t *testing.T) {
+	editor, win, plat, _ := newEditorMenuFixture(t, false)
+	editor.setSelectionValue(TextSelection{4, 1})
+	rightClick := func(x float32) {
+		t.Helper()
+		// Windows requests on release; other platforms request on press.
+		// Dispatch the complete click rather than assuming either timing.
+		for _, kind := range []events.EventType{events.PointerDown, events.PointerUp} {
+			if err := win.DispatchEvent(events.PointerEvent{EventType: kind, Button: events.PointerButtonRight, Position: geometry.Point{X: x, Y: 12}}); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	rightClick(24) // Fixed fixture cells: padding 4 + two cells, inside [1,4).
+	if editor.contextMenu == nil || !editor.contextMenu.popup.Visible() || editor.selection != (TextSelection{4, 1}) {
+		t.Fatal("right click lost the existing reversed selection")
+	}
+	pm := editor.contextMenu.popup
+	if pm.popover.Position() != (geometry.Point{24, 12}) || editor.input.CapturingPointer() {
+		t.Fatal("wrong local popup origin or retained selection drag")
+	}
+	editorKey(t, win, events.KeyEscape, 0)
+	if pm.Visible() || editor.selection != (TextSelection{4, 1}) || win.modalTarget != nil {
+		t.Fatal("Escape changed selection or retained modal menu")
+	}
+	rightClick(42) // Last selected cell's trailing half maps to caret offset 4.
+	if editor.selection != (TextSelection{4, 1}) {
+		t.Fatal("nearest-caret rounding discarded a visually hit selection")
+	}
+	editorKey(t, win, events.KeyEscape, 0)
+	rightClick(54)
+	if editor.selection != (TextSelection{5, 5}) || !pm.Visible() || len(plat.natives) != 1 {
+		t.Fatal("right click outside selection did not position caret/reuse popup")
+	}
+	// The first outside click only dismisses; it does not move the caret.
+	win.DispatchEvent(events.PointerEvent{EventType: events.PointerDown, Button: events.PointerButtonLeft, Position: geometry.Point{X: 4, Y: 12}})
+	if pm.Visible() || editor.selection != (TextSelection{5, 5}) {
+		t.Fatal("outside click leaked into editor")
+	}
+	// Shift+F10 preserves the selection and anchors at the caret bottom.
+	editor.setSelectionValue(TextSelection{1, 3})
+	editorMenuOpen(t, editor, win)
+	if pm.popover.Position() != (geometry.Point{34, 24}) || editor.selection != (TextSelection{1, 3}) {
+		t.Fatalf("keyboard popup moved selection or used wrong caret: %v", pm.popover.Position())
+	}
+	win.DispatchEvent(events.FocusEvent{Focused: false})
+	if pm.Visible() || win.modalTarget != nil {
+		t.Fatal("window focus loss retained menu")
+	}
+}
+
+func TestTextEditorContextMenuScrolledPosition(t *testing.T) {
+	editor, win, _, _ := newEditorMenuFixture(t, false)
+	editor.setModel(NewTextModel("first\nsecond\nthird"))
+	editor.setSelectionValue(TextSelection{7, 10})
+	editor.revealCaret = false
+	editor.layoutVisible(geometry.Size{209, 60}, geometry.Point{Y: 20})
+	for _, kind := range []events.EventType{events.PointerDown, events.PointerUp} {
+		if err := win.DispatchEvent(events.PointerEvent{EventType: kind, Button: events.PointerButtonRight, Position: geometry.Point{X: 24, Y: 12}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if editor.contextMenu == nil || !editor.contextMenu.popup.Visible() || editor.selection != (TextSelection{7, 10}) || editor.contextMenu.popup.popover.Position() != (geometry.Point{24, 12}) {
+		t.Fatal("scrolled selection or popup origin used document rather than local coordinates")
+	}
+}
+
+func TestTextEditorControlClickContextMenu(t *testing.T) {
+	editor, win, _, _ := newEditorMenuFixture(t, true)
+	win.DispatchEvent(events.PointerEvent{EventType: events.PointerDown, Button: events.PointerButtonLeft, Modifiers: events.ModifierControl, Position: geometry.Point{X: 24, Y: 12}})
+	visible := editor.contextMenu != nil && editor.contextMenu.popup.Visible()
+	if visible != (runtime.GOOS == "darwin") {
+		t.Fatalf("Control+click menu=%t on %s", visible, runtime.GOOS)
+	}
+}
+
+func TestTextEditorCopyCommandDuringPreedit(t *testing.T) {
+	editor, win, _, clip := newEditorMenuFixture(t, false)
+	editor.setSelectionValue(TextSelection{1, 6})
+	editor.im.emitPreedit("x", 1) // Projection is shorter than the model selection.
+	editorKey(t, win, events.KeyC, textCommandModifier())
+	if clip.text != "bcdef" || editor.preedit == nil || editor.selection != (TextSelection{1, 6}) {
+		t.Fatalf("copy normalized model positions against preedit: %q, %+v", clip.text, editor.selection)
+	}
+}
+
+func TestTextEditorContextMenuAvailability(t *testing.T) {
+	editor, win, _, _ := newEditorMenuFixture(t, false)
+	pm := editorMenuOpen(t, editor, win)
+	check := func(enabled ...textEditCommand) {
+		t.Helper()
+		for command, item := range editor.contextMenu.items {
+			want := false
+			for _, e := range enabled {
+				want = want || command == e
+			}
+			if item.Enabled() != want {
+				t.Fatalf("%s enabled=%v, want %v", item.Label(), item.Enabled(), want)
+			}
+		}
+	}
+	check(textPaste, textSelectAll)
+	editor.setSelectionValue(TextSelection{1, 4})
+	check(textCut, textCopy, textPaste, textDeleteSelection, textSelectAll)
+	editor.setReadOnly(true)
+	check(textCopy, textSelectAll)
+	editorMenuClick(t, pm, "Delete")
+	if !pm.Visible() || editor.model.Text() != "abcdef" {
+		t.Fatal("disabled menu item activated")
+	}
+	for _, widget := range pm.content.list.items {
+		info := widget.Snapshot()
+		if info.Text == "Delete" && (info.Enabled || len(info.Actions) != 0 || info.Role != RoleMenuItem) {
+			t.Fatal("disabled menu item advertises interactive snapshot")
+		}
+	}
+	editor.setReadOnly(false)
+	_ = editor.model.Apply(TextEdit{Range: TextRange{0, 0}, Text: "!"}, textedit.EditOptions{Atomic: true})
+	check(textUndo, textCut, textCopy, textPaste, textDeleteSelection, textSelectAll)
+	editor.model.SetText("")
+	check(textPaste)
+}
+
+func TestTextEditorContextMenuLifecycle(t *testing.T) {
+	for _, kind := range []string{"unmount", "replace-model", "reopen", "preedit", "stale-paste"} {
+		t.Run(kind, func(t *testing.T) {
+			editor, win, plat, clip := newEditorMenuFixture(t, false)
+			editor.setSelectionValue(TextSelection{1, 4})
+			if kind == "preedit" {
+				editor.im.emitPreedit("未提交", 3)
+			}
+			pm := editorMenuOpen(t, editor, win)
+			switch kind {
+			case "unmount":
+				pm.ConnectClosed(func() { win.SetWidget(nil) })
+				editorMenuClick(t, pm, "Delete")
+				if editor.model.Text() != "abcdef" || !plat.natives[0].destroyed || win.modalTarget != nil {
+					t.Fatal("activation after unmount or popup resource leak")
+				}
+			case "replace-model":
+				model := NewTextModel("replacement")
+				pm.ConnectClosed(func() { editor.setModel(model) })
+				editorMenuClick(t, pm, "Delete")
+				if editor.model != model || model.Text() != "replacement" {
+					t.Fatal("old menu action edited replacement model")
+				}
+			case "preedit":
+				if editor.preedit != nil || editor.model.Text() != "abcdef" {
+					t.Fatal("opening menu committed temporary preedit")
+				}
+				editorMenuClick(t, pm, "Copy")
+				if clip.text != "bcd" {
+					t.Fatal("copy included preedit instead of committed selection")
+				}
+			case "reopen":
+				once := true
+				pm.ConnectClosed(func() {
+					if once {
+						once = false
+						editorMenuOpen(t, editor, win)
+					}
+				})
+				editorMenuClick(t, pm, "Delete")
+				if !pm.Visible() || editor.model.Text() != "abcdef" {
+					t.Fatal("old action ran after close callback opened a new menu")
+				}
+			case "stale-paste":
+				editorMenuClick(t, pm, "Paste")
+				editor.setSelectionValue(TextSelection{})
+				clip.pending("stale", nil)
+				if editor.model.Text() != "abcdef" {
+					t.Fatal("late menu paste changed a different selection")
+				}
+			}
+		})
+	}
+}
+
+type editorClipboard struct {
+	text    string
+	pending func(string, error)
+}
+
+func (c *editorClipboard) SetText(s string) error { c.text = s; return nil }
+
+func (c *editorClipboard) RequestText(fn func(string, error)) { c.pending = fn }
+
+// 导航、选择、剪贴板与历史。
+
+func TestTextViewKeysSelectionNativeCommitAndReadonly(t *testing.T) {
+	editor, win, _ := newEditorFixture(t, "ab\ncd")
+	editor.SetSelection(TextSelection{1, 1})
+	editorKey(t, win, events.KeyArrowRight, events.ModifierShift)
+	if editor.Selection() != (TextSelection{1, 2}) {
+		t.Fatalf("shift selection %+v", editor.Selection())
+	}
+	editor.im.emitCommit(IMCommit{Text: "中"})
+	if editor.model.Text() != "a中\ncd" || editor.selection != (TextSelection{4, 4}) {
+		t.Fatalf("commit result %q %+v", editor.model.Text(), editor.selection)
+	}
+	editorKey(t, win, events.KeyDelete, 0)
+	if editor.model.Text() != "a中cd" {
+		t.Fatal("delete did not join paragraphs")
+	}
+	editorKey(t, win, events.KeyEnter, 0)
+	if editor.model.Text() != "a中\ncd" {
+		t.Fatal("enter did not insert LF")
+	}
+	editor.SetReadOnly(true)
+	if editor.IMContext() != nil || win.activeIM != nil {
+		t.Fatal("read-only still enables IME")
+	}
+	editorKey(t, win, events.KeyBackspace, 0)
+	editor.im.emitCommit(IMCommit{Text: "NO"})
+	if editor.model.Text() != "a中\ncd" {
+		t.Fatal("read-only changed document")
+	}
+	editorKey(t, win, events.KeyHome, textCommandModifier())
+	if editor.selection.Caret != 0 {
+		t.Fatal("read-only navigation disabled")
+	}
+	editor.SetReadOnly(false)
+	if win.activeIM != editor.im {
+		t.Fatal("editable IME not rebound")
+	}
+}
+
+func TestTextViewPointerCaptureAndVerticalColumn(t *testing.T) {
+	editor, win, _ := newEditorFixture(t, "abc\nx\nabc")
+	for _, e := range []events.PointerEvent{
+		{EventType: events.PointerDown, Position: geometry.Point{X: 6, Y: 8}, Button: events.PointerButtonLeft},
+		{EventType: events.PointerMove, Position: geometry.Point{X: 207, Y: 8}, Buttons: events.PointerButtonLeftDown},
+		{EventType: events.PointerUp, Position: geometry.Point{X: 207, Y: 8}, Button: events.PointerButtonLeft},
+	} {
+		if err := win.DispatchEvent(e); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if editor.selection != (TextSelection{0, 3}) || editor.input.CapturingPointer() {
+		t.Fatalf("drag selection %+v", editor.selection)
+	}
+	editor.SetSelection(TextSelection{3, 3})
+	editorKey(t, win, events.KeyArrowDown, 0)
+	if editor.selection.Caret != 5 {
+		t.Fatalf("short line caret=%d", editor.selection.Caret)
+	}
+	editorKey(t, win, events.KeyArrowDown, 0)
+	if editor.selection.Caret != 9 {
+		t.Fatalf("desired X not retained: %d", editor.selection.Caret)
+	}
+}
+
+func TestTextViewPasteDropsStaleReply(t *testing.T) {
+	editor, win, _ := newEditorFixture(t, "abc")
+	clip := &editorClipboard{}
+	App.(*application).clipboard = clip
+	editor.SetSelection(TextSelection{1, 2})
+	editorKey(t, win, events.KeyV, textCommandModifier())
+	editor.SetSelection(TextSelection{3, 3})
+	clip.pending("wrong", nil)
+	if editor.model.Text() != "abc" {
+		t.Fatal("stale selection received paste")
+	}
+	editorKey(t, win, events.KeyV, textCommandModifier())
+	clip.pending("\r\nX", nil)
+	if editor.model.Text() != "abc\nX" {
+		t.Fatalf("paste not normalized: %q", editor.model.Text())
+	}
+	editorKey(t, win, events.KeyV, textCommandModifier())
+	win.SetWidget(nil)
+	win.SetWidget(editor)
+	clip.pending("wrong", nil)
+	if editor.model.Text() != "abc\nX" {
+		t.Fatal("paste survived unmount/remount")
+	}
+}
+
+func TestTextViewUndoRestoresInvokerSelectionAndSplitsEditors(t *testing.T) {
+	a, win, _ := newEditorFixture(t, "ab")
+	b := NewTextView()
+	b.SetModel(a.model)
+	other := &window{}
+	other.SetWidget(b)
+	b.Arrange(geometry.Rect(0, 0, 209, 108))
+	t.Cleanup(func() { other.SetWidget(nil) })
+	a.SetSelection(TextSelection{2, 2})
+	b.SetSelection(TextSelection{2, 2})
+	a.im.emitCommit(IMCommit{Text: "x"})
+	a.im.emitCommit(IMCommit{Text: "y"})
+	b.im.emitCommit(IMCommit{Text: "z"})
+	editorKey(t, win, events.KeyZ, textCommandModifier())
+	if a.model.Text() != "abxy" || a.selection != (TextSelection{4, 4}) {
+		t.Fatalf("undo from other view: %q %+v", a.model.Text(), a.selection)
+	}
+	b.SetSelection(TextSelection{0, 0})
+	editorKey(t, win, events.KeyZ, textCommandModifier())
+	if a.model.Text() != "ab" || a.selection != (TextSelection{2, 2}) || b.selection != (TextSelection{}) {
+		t.Fatalf("undo restored wrong view: %q %+v %+v", a.model.Text(), a.selection, b.selection)
+	}
+	if a.model.CanUndo() {
+		t.Fatal("editing views should produce exactly two undo steps")
+	}
+	editorKey(t, win, events.KeyZ, textCommandModifier()|events.ModifierShift)
+	if a.model.Text() != "abxy" || a.selection != (TextSelection{4, 4}) {
+		t.Fatal("redo did not restore after-selection")
+	}
+}
+
+func TestTextViewReentrantModelAndSelectionCallbacks(t *testing.T) {
+	typo := &editorTypography{}
+	setTestApplication(t, typo)
+	m := NewTextModel("a")
+	m.ConnectChange(func(change TextChange) {
+		if change.Revision == 1 {
+			_ = m.Replace(TextRange{0, 0}, "Y")
+		}
+	})
+	editor := NewTextView()
+	editor.SetModel(m)
+	win := &window{}
+	win.SetWidget(editor)
+	t.Cleanup(func() { win.SetWidget(nil) })
+	editor.Arrange(geometry.Rect(0, 0, 209, 108))
+	editor.SetSelection(TextSelection{1, 1})
+	editor.im.emitCommit(IMCommit{Text: "X"})
+	if m.Text() != "YaX" || editor.selection != (TextSelection{3, 3}) {
+		t.Fatalf("reentrant model: %q %+v", m.Text(), editor.selection)
+	}
+	editor.ConnectSelection(func(TextSelection) { win.SetWidget(nil) })
+	editor.im.emitCommit(IMCommit{Text: "Z"})
+	if editor.modelHandle != nil || !editor.suspended {
+		t.Fatal("selection callback unmount was ignored")
+	}
+}
+
+// 双向文本与视觉导航。
+
+// Explicit geometry, not editor-derived expectations: Hebrew occupies x=10..30
+// in reverse byte order. Ordinary text uses the existing 10 DIP fixture.
+type bidiEditorTypography struct{ editorTypography }
+
+func (c *bidiEditorTypography) NewTextLayout(text string, format typography.TextFormat, width, height float32) (typography.TextLayout, error) {
+	l, err := c.editorTypography.NewTextLayout(text, format, width, height)
+	if text != "aאבc" && text != "אב" {
+		return l, err
+	}
+	p := l.(*testTextLayout)
+	start, x := 0, float32(0)
+	p.clusters = nil
+	if text == "aאבc" {
+		start, x = 1, 10
+		p.clusters = append(p.clusters, typography.TextCluster{Length: 1, Width: 10, Height: 20})
+	}
+	p.clusters = append(p.clusters,
+		typography.TextCluster{Start: start, Length: 2, X: x + 10, Width: 10, Height: 20, Direction: typography.TextRightToLeft},
+		typography.TextCluster{Start: start + 2, Length: 2, X: x, Width: 10, Height: 20, Direction: typography.TextRightToLeft})
+	if text == "aאבc" {
+		p.clusters = append(p.clusters, typography.TextCluster{Start: 5, Length: 1, X: 30, Width: 10, Height: 20})
+	}
+	return p, err
+}
+
+func TestTextEditorCollapseSelectionVisually(t *testing.T) {
+	for _, single := range []bool{false, true} {
+		name := "multiline"
+		if single {
+			name = "singleline"
+		}
+		t.Run(name, func(t *testing.T) {
+			for _, tc := range []struct {
+				name, text  string
+				selection   TextSelection
+				left, right int
+			}{
+				{"rtl", "אב", TextSelection{0, 4}, 4, 0},
+				{"rtl-reverse-selection", "אב", TextSelection{4, 0}, 4, 0},
+				{"embedded-rtl", "aאבc", TextSelection{1, 5}, 5, 1},
+				{"disjoint-selection", "aאבc", TextSelection{0, 3}, 0, 3},
+				{"ltr", "abcd", TextSelection{1, 3}, 1, 3},
+			} {
+				t.Run(tc.name, func(t *testing.T) {
+					setTestApplication(t, &bidiEditorTypography{})
+					var widget Widget
+					var editor *textEditor
+					if single {
+						input := NewTextInput()
+						input.SetText(tc.text)
+						widget, editor = input, input.textEditor
+					} else {
+						view := NewTextView()
+						view.SetModel(NewTextModel(tc.text))
+						widget, editor = view, view.textEditor
+					}
+					win := &window{}
+					win.SetWidget(widget)
+					t.Cleanup(func() { win.SetWidget(nil) })
+					widget.Arrange(geometry.Rect(0, 0, 200, 80))
+					win.SetFocusedWidget(widget)
+					for _, direction := range []struct {
+						key  events.Key
+						want int
+					}{{events.KeyArrowLeft, tc.left}, {events.KeyArrowRight, tc.right}} {
+						editor.setSelectionValue(tc.selection)
+						editorKey(t, win, direction.key, 0)
+						if editor.selection != (TextSelection{direction.want, direction.want}) {
+							t.Fatalf("key %v collapsed to %+v, want %d", direction.key, editor.selection, direction.want)
+						}
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestTextEditorCollapseSelectionAcrossLines(t *testing.T) {
+	for _, tc := range []struct {
+		name, text string
+		selection  TextSelection
+	}{
+		{"paragraphs", "abcd\ne", TextSelection{3, 6}},
+		{"soft-wrap", "abcdef", TextSelection{3, 5}},
+		{"soft-wrap-boundary", "abcdefgh", TextSelection{4, 8}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			editor, win, _ := newEditorFixture(t, tc.text)
+			editor.Arrange(geometry.Rect(0, 0, 48, 100)) // four 10 DIP cells plus padding
+			for _, key := range []events.Key{events.KeyArrowLeft, events.KeyArrowRight} {
+				editor.SetSelection(tc.selection)
+				editorKey(t, win, key, 0)
+				want := tc.selection.Anchor
+				if key == events.KeyArrowRight {
+					want = tc.selection.Caret
+				}
+				if editor.Selection() != (TextSelection{want, want}) {
+					t.Fatalf("key %v = %+v, want %d", key, editor.Selection(), want)
+				}
+			}
+		})
+	}
+}
+
+// 预编辑提交与撤销分组。
+
+// XIM can clear/end preedit before delivering its commit in a later key event.
+// Keep that commit separate from ordinary typing on both sides, while still
+// merging adjacent ordinary keystrokes. Exercise the window's actual IM route.
+func TestTextEditorPreeditDoneBeforeCommitUndoGroups(t *testing.T) {
+	for _, single := range []bool{false, true} {
+		name := "multiline"
+		if single {
+			name = "singleline"
+		}
+		t.Run(name, func(t *testing.T) {
+			var editor *textEditor
+			var win *window
+			if single {
+				input, w, _ := newInputFixture(t, "")
+				editor, win = input.textEditor, w
+			} else {
+				view, w, _ := newEditorFixture(t, "")
+				editor, win = view.textEditor, w
+			}
+			commit := func(text string) {
+				win.onInputMethod(platform.InputMethodResult{Kind: platform.InputMethodCommit, Text: text})
+			}
+			commit("a")
+			commit("b")
+			win.onInputMethod(platform.InputMethodResult{Kind: platform.InputMethodPreedit, Text: "你", Caret: 3})
+			win.onInputMethod(platform.InputMethodResult{Kind: platform.InputMethodPreedit})
+			if editor.model.Text() != "ab" {
+				t.Fatal("preedit changed committed text")
+			}
+			commit("你")
+			commit("x")
+			commit("y")
+			if editor.model.Text() != "ab你xy" {
+				t.Fatal("commit was lost")
+			}
+			for _, want := range []string{"ab你", "ab", ""} {
+				editorKey(t, win, events.KeyZ, textCommandModifier())
+				if got := editor.model.Text(); got != want {
+					t.Fatalf("undo: %q want %q", got, want)
+				}
+			}
+		})
+	}
+}
+
+func TestTextEditorCommitWithoutPreeditUndoGroups(t *testing.T) {
+	for _, single := range []bool{false, true} {
+		name := "multiline"
+		if single {
+			name = "singleline"
+		}
+		t.Run(name, func(t *testing.T) {
+			var editor *textEditor
+			var win *window
+			if single {
+				input, w, _ := newInputFixture(t, "")
+				editor, win = input.textEditor, w
+			} else {
+				view, w, _ := newEditorFixture(t, "")
+				editor, win = view.textEditor, w
+			}
+			commit := func(text string, composed bool) {
+				win.onInputMethod(platform.InputMethodResult{Kind: platform.InputMethodCommit, Text: text, Composed: composed})
+			}
+			commit("a", false)
+			commit("中", false)   // Unicode itself does not imply composition
+			commit("word", true) // ASCII can be a native composition/service result
+			commit("你", true)
+			commit("x", false)
+			commit("y", false)
+			if editor.model.Text() != "a中word你xy" {
+				t.Fatal("native text lost")
+			}
+			for _, want := range []string{"a中word你", "a中word", "a中", ""} {
+				editorKey(t, win, events.KeyZ, textCommandModifier())
+				if got := editor.model.Text(); got != want {
+					t.Fatalf("undo = %q want %q", got, want)
+				}
+			}
+			for _, want := range []string{"a中", "a中word", "a中word你", "a中word你xy"} {
+				editorKey(t, win, events.KeyZ, textCommandModifier()|events.ModifierShift)
+				if got := editor.model.Text(); got != want {
+					t.Fatalf("redo = %q want %q", got, want)
+				}
+			}
+		})
+	}
+}
+
+// 光标计时器与共用计时替身。
+
+func timedEditorFixture(t *testing.T) (*TextView, *ScrollView, *window, *timerTestQueue, *editorTypography) {
+	t.Helper()
+	q := newTimerTestQueue(t)
+	typo := &editorTypography{}
+	q.app.typo = typo
+	old := App
+	App = q.app
+	t.Cleanup(func() { App = old })
+	editor := NewTextView()
+	editor.SetModel(NewTextModel(strings.Repeat("row\n", 100)))
+	scroll := NewScrollView()
+	scroll.SetChild(editor)
+	win := &window{}
+	win.SetWidget(scroll)
+	t.Cleanup(func() { win.SetWidget(nil) })
+	box := geometry.Rect(0, 0, 220, 108)
+	scroll.Measure(layout.Tight(box.Size))
+	scroll.Arrange(box)
+	win.SetFocusedWidget(editor)
+	if err := win.DispatchEvent(events.FocusEvent{Focused: true}); err != nil {
+		t.Fatal(err)
+	}
+	return editor, scroll, win, q, typo
+}
+
+func TestTextViewBlinkOnlyPaintsAndStopsWithFocus(t *testing.T) {
+	editor, _, win, q, typo := timedEditorFixture(t)
+	if editor.blinkTimer == nil || !editor.blinkTimer.Active() {
+		t.Fatal("focused view did not start blink")
+	}
+	count := len(typo.calls)
+	win.layoutDirty, win.paintDirty = false, false
+	q.advance(textCaretInterval)
+	q.dispatch(t)
+	if editor.caretVisible || !win.paintDirty || win.layoutDirty || len(typo.calls) != count {
+		t.Fatal("blink changed layout or failed to request paint")
+	}
+	editorKey(t, win, events.KeyArrowRight, 0)
+	if !editor.caretVisible {
+		t.Fatal("navigation did not show caret immediately")
+	}
+	q.advance(textCaretInterval)
+	q.dispatch(t)
+	if editor.caretVisible {
+		t.Fatal("restarted blink did not fire")
+	}
+	_ = win.DispatchEvent(events.FocusEvent{Focused: false})
+	if editor.blinkTimer.Active() {
+		t.Fatal("background window kept blinking")
+	}
+	_ = win.DispatchEvent(events.FocusEvent{Focused: true})
+	if !editor.blinkTimer.Active() || !editor.caretVisible {
+		t.Fatal("returning window focus did not resume steady-to-blink cycle")
+	}
+	win.onInputMethod(platform.InputMethodResult{Kind: platform.InputMethodPreedit, Text: "compose", Caret: 7})
+	if editor.blinkTimer.Active() || !editor.caretVisible {
+		t.Fatal("IME caret must remain steady")
+	}
+	win.onInputMethod(platform.InputMethodResult{Kind: platform.InputMethodPreedit})
+	if !editor.blinkTimer.Active() {
+		t.Fatal("cancel did not resume blinking")
+	}
+	win.SetWidget(nil)
+	if editor.blinkTimer != nil || editor.scrollTimer != nil || editor.windowFocusHandle != nil || len(q.s.queue) != 0 {
+		t.Fatal("unmount retained timers/connections")
+	}
+}
+
+// 原生排版共享验证（入口保留平台后缀）。
+
+// Native shaping without a display: verify editing through the normal dispatcher
+// using real native clusters. Assertions are byte boundaries and visual ordering,
+// not font-dependent pixel widths. This is not a native window/IME acceptance test.
+func testTextEditorNativeNavigation(t *testing.T, newContext func() (typography.Context, error)) {
+	t.Helper()
+	for _, single := range []bool{false, true} {
+		name := "multiline"
+		if single {
+			name = "singleline"
+		}
+		t.Run(name, func(t *testing.T) {
+			runtime.LockOSThread()
+			defer runtime.UnlockOSThread()
+			typo, err := newContext()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer typo.Destroy()
+			setTestApplication(t, typo)
+			var widget Widget
+			var editor *textEditor
+			if single {
+				input := NewTextInput()
+				input.SetText("אבג")
+				widget, editor = input, input.textEditor
+			} else {
+				view := NewTextView()
+				view.SetModel(NewTextModel("אבג"))
+				widget, editor = view, view.textEditor
+			}
+			win := &window{}
+			win.SetWidget(widget)
+			defer win.SetWidget(nil) // all native layout cleanup precedes UnlockOSThread
+			widget.Arrange(geometry.Rect(0, 0, 200, 80))
+			win.SetFocusedWidget(widget)
+			editor.setSelectionValue(TextSelection{0, 6})
+			editorKey(t, win, events.KeyArrowLeft, 0)
+			if editor.selection != (TextSelection{6, 6}) {
+				t.Fatalf("RTL selection collapsed left to %+v, want byte 6", editor.selection)
+			}
+			before, _ := editor.caretRect()
+			editorKey(t, win, events.KeyArrowRight, events.ModifierShift)
+			after, _ := editor.caretRect()
+			if editor.selection != (TextSelection{6, 4}) || after.X <= before.X {
+				t.Fatalf("RTL Shift+Right: selection=%+v x=%g -> %g", editor.selection, before.X, after.X)
+			}
+			editorKey(t, win, events.KeyBackspace, 0)
+			if editor.model.Text() != "אב" {
+				t.Fatalf("deleted wrong RTL cluster: %q", editor.model.Text())
+			}
+			editorKey(t, win, events.KeyZ, textCommandModifier())
+			if editor.model.Text() != "אבג" || editor.selection != (TextSelection{6, 4}) {
+				t.Fatal("undo did not restore RTL text and directional selection")
+			}
+			editor.model.SetText("e\u0301x")
+			editor.setSelectionValue(TextSelection{0, 0})
+			editorKey(t, win, events.KeyArrowRight, 0)
+			if editor.selection.Caret != 3 {
+				t.Fatalf("navigation split native combining cluster: %+v", editor.selection)
+			}
+			editorKey(t, win, events.KeyBackspace, 0)
+			if editor.model.Text() != "x" {
+				t.Fatalf("deletion split native combining cluster: %q", editor.model.Text())
+			}
+		})
+	}
+}
+
+func checkParagraphCache(t *testing.T, c *textParagraphCache) {
+	t.Helper()
+	count, size := 0, 0
+	var previous *textParagraph
+	for p := c.oldest; p != nil; p = p.next {
+		if p.previous != previous || c.paragraphs[p.index] != p {
+			t.Fatal("cache links and paragraph map disagree")
+		}
+		previous = p
+		count++
+		size += p.textBytes
+		if count > len(c.paragraphs) {
+			t.Fatal("cache cycle")
+		}
+	}
+	if count != len(c.paragraphs) || size != c.textBytes || previous != c.newest {
+		t.Fatal("cache accounting mismatch")
+	}
+}
+
+func TestTextParagraphCacheRecencyAndBudgets(t *testing.T) {
+	var c textParagraphCache
+	for i := 0; i < textParagraphCacheLimit; i++ {
+		c.add(i, 10, &textParagraph{layout: &testTextLayout{}})
+	}
+	retained, evicted := c.paragraphs[0], c.paragraphs[1]
+	c.touch(retained)
+	c.add(textParagraphCacheLimit, 10, &textParagraph{layout: &testTextLayout{}})
+	c.trim(textParagraphCacheLimit, textParagraphCacheLimit+1)
+	if c.paragraphs[0] != retained || c.paragraphs[1] != nil || !evicted.layout.(*testTextLayout).destroyed {
+		t.Fatal("eviction did not respect access recency")
+	}
+	checkParagraphCache(t, &c)
+	c.clear()
+	if !retained.layout.(*testTextLayout).destroyed {
+		t.Fatal("clear did not release retained resources")
+	}
+	checkParagraphCache(t, &c)
+	// An oversized active paragraph must remain usable. Once it leaves the
+	// active range, the byte budget evicts it even below the count limit.
+	large := &textParagraph{layout: &testTextLayout{}}
+	c.add(0, textParagraphCacheBytes+1, large)
+	c.trim(0, 1)
+	if c.paragraphs[0] != large {
+		t.Fatal("evicted oversized active paragraph")
+	}
+	c.add(1, 10, &textParagraph{layout: &testTextLayout{}})
+	c.trim(1, 2)
+	if c.paragraphs[0] != nil || c.textBytes != 10 || !large.layout.(*testTextLayout).destroyed {
+		t.Fatal("text byte budget not enforced")
+	}
+	checkParagraphCache(t, &c)
+	c.clear()
+	// The active viewport can contain more paragraphs than the cache limit.
+	for i := 0; i < textParagraphCacheLimit+10; i++ {
+		c.add(i, 0, &textParagraph{})
+	}
+	c.trim(0, textParagraphCacheLimit+10)
+	if len(c.paragraphs) != textParagraphCacheLimit+10 {
+		t.Fatal("active range was evicted")
+	}
+	c.trim(textParagraphCacheLimit, textParagraphCacheLimit+10)
+	if len(c.paragraphs) != textParagraphCacheLimit {
+		t.Fatal("cache did not recover its bound after viewport shrank")
+	}
+	checkParagraphCache(t, &c)
+}
+
+func TestTextViewRecentLayoutsSurviveScrollEditAndUnmount(t *testing.T) {
+	var text strings.Builder
+	for i := 0; i < 2000; i++ {
+		fmt.Fprintf(&text, "line %04d\n", i)
+	}
+	editor, win, typo := newEditorFixture(t, text.String())
+	original := editor.paragraph(3)
+	editor.LayoutVisible(editor.viewport, geometry.Point{Y: 2000})
+	count := len(typo.calls)
+	editor.LayoutVisible(editor.viewport, geometry.Point{})
+	if editor.paragraph(3) != original || len(typo.calls) != count {
+		t.Fatal("return scroll rebuilt cached paragraphs")
+	}
+	editor.LayoutVisible(editor.viewport, geometry.Point{Y: 2000})
+	if err := editor.model.Replace(TextRange{}, "new\n"); err != nil {
+		t.Fatal(err)
+	}
+	if editor.paragraphs[4] != original || original.index != 4 {
+		t.Fatal("edit failed to remap an offscreen cached paragraph")
+	}
+	checkParagraphCache(t, &editor.textParagraphCache)
+	if !editor.model.Undo() {
+		t.Fatal("undo failed")
+	}
+	if editor.paragraphs[3] != original || original.index != 3 {
+		t.Fatal("undo failed to restore cached paragraph index")
+	}
+	// A standalone fixture has no ScrollView to acknowledge anchor requests.
+	editor.LayoutVisible(editor.viewport, editor.offset)
+	editor.LayoutVisible(editor.viewport, editor.offset)
+	for y := float32(4000); y < 36000; y += 300 {
+		editor.LayoutVisible(editor.viewport, geometry.Point{Y: y})
+		checkParagraphCache(t, &editor.textParagraphCache)
+		if len(editor.paragraphs) > textParagraphCacheLimit {
+			t.Fatal("scroll cache grew without bound")
+		}
+	}
+	if !original.layout.(*testTextLayout).destroyed {
+		t.Fatal("old cached layout was never evicted")
+	}
+	win.SetWidget(nil)
+	checkParagraphCache(t, &editor.textParagraphCache)
+	for _, p := range typo.layouts {
+		if !p.destroyed {
+			t.Fatal("unmount leaked a native layout")
+		}
+	}
+}
+
+func TestTextViewOffscreenCacheInvalidation(t *testing.T) {
+	editor, _, typo := newEditorFixture(t, strings.Repeat("abcdefghijklmnopqrst\n", 2000))
+	p := editor.paragraph(3)
+	editor.LayoutVisible(editor.viewport, geometry.Point{Y: 2000})
+	count := len(typo.calls)
+	app := App.(*application)
+	foreground := color.RGBA{R: 80, A: 255}
+	app.style = style.Sheet(append(DefaultStyleRules(), style.Name(styleNameTextView).ForegroundColor(foreground))...)
+	editor.StyleChanged()
+	if p.layout.(*testTextLayout).destroyed || !colors.Equal(p.layout.Format().TextColor, foreground) || len(typo.calls) != count {
+		t.Fatal("color change failed to update retained layouts in place")
+	}
+	editor.LayoutVisible(geometry.Size{Width: 109, Height: 108}, editor.offset)
+	if p.measured {
+		t.Fatal("offscreen measurement remained valid after width change")
+	}
+	if got := editor.paragraph(3); got != p || got.height != 40 {
+		t.Fatal("offscreen paragraph was not lazily resized on access")
+	}
+	// Width A -> B -> A resets the height index twice. Reusing a cached native
+	// layout must still restore its height into the current index.
+	editor.LayoutVisible(geometry.Size{Width: 209, Height: 108}, geometry.Point{})
+	if editor.paragraph(3) != p || p.height != 20 || editor.heights.Top(4)-editor.heights.Top(3) != 20 {
+		t.Fatal("returning to original width left stale paragraph heights")
+	}
+	app.style = style.Sheet(append(DefaultStyleRules(), style.Name(styleNameTextView).FontSize(30))...)
+	editor.StyleChanged()
+	if !p.layout.(*testTextLayout).destroyed || len(editor.paragraphs) != 0 {
+		t.Fatal("font change did not clear retained layouts")
+	}
+	checkParagraphCache(t, &editor.textParagraphCache)
+}
+
+func TestTextViewMeasuresEditingGeometryOnlyOnDemand(t *testing.T) {
+	editor, _, _ := newEditorFixture(t, strings.Repeat("abcdefghijklmnopqrst\n", 30))
+	p := editor.paragraph(1)
+	native := p.layout.(*testTextLayout)
+	if p.geometryValid || native.metricsCalls != 0 {
+		t.Fatal("display-only paragraph eagerly built editing geometry")
+	}
+	editor.Paint(&testLabelPainter{})
+	if p.geometryValid || native.metricsCalls != 0 {
+		t.Fatal("plain painting built unrelated editing geometry")
+	}
+	rng, _ := editor.model.LineRange(1)
+	if got := editor.snapPosition(rng.Start + 1); got != rng.Start+1 {
+		t.Fatalf("lazy snapping returned %d", got)
+	}
+	editor.snapPosition(rng.Start + 2)
+	if !p.geometryValid || native.metricsCalls != 1 {
+		t.Fatal("editing geometry was not cached after first use")
+	}
+	editor.LayoutVisible(geometry.Size{Width: 109, Height: 108}, geometry.Point{})
+	p = editor.paragraph(1)
+	if p.layout != native || p.geometryValid {
+		t.Fatal("reflow did not retain layout and invalidate old geometry")
+	}
+	g := p.editGeometry(editor.lineHeight)
+	if g.LineCount() != 2 || native.metricsCalls != 2 {
+		t.Fatal("lazy geometry did not use the new wrapping width")
+	}
+	p.editGeometry(editor.lineHeight)
+	if native.metricsCalls != 2 {
+		t.Fatal("unchanged geometry was remeasured")
+	}
+}
+
+func TestTextViewPaintSelectionDoesNotMeasureUnselectedParagraphs(t *testing.T) {
+	editor, _, _ := newEditorFixture(t, strings.Repeat("row\n", 30))
+	editor.SetSelection(TextSelection{4, 6})
+	editor.Paint(&testLabelPainter{})
+	if !editor.paragraph(1).geometryValid || editor.paragraph(2).geometryValid {
+		t.Fatal("selection painting measured an unrelated paragraph")
+	}
+}
+
+func TestTextViewWidthChangeReusesLayoutAndRefreshesHeight(t *testing.T) {
+	editor, _, typo := newEditorFixture(t, "abcdefghijklmnopqrst")
+	original := editor.paragraphs[0].layout
+	count := len(typo.calls)
+	for _, width := range []float32{109, 209, 89, 209} {
+		editor.LayoutVisible(geometry.Size{Width: width, Height: 108}, geometry.Point{})
+		p := editor.paragraph(0)
+		if p.layout != original || original.(*testTextLayout).destroyed {
+			t.Fatal("width change replaced the native layout")
+		}
+		nativeWidth, _ := p.layout.Size()
+		if nativeWidth != width-9 {
+			t.Fatalf("stale native width: %g, want %g", nativeWidth, width-9)
+		}
+		cols := int((width - 9) / 10)
+		wantHeight := float32((20+cols-1)/cols) * 20
+		if p.height != wantHeight || editor.heights.Total() != wantHeight {
+			t.Fatalf("stale height at width %g: paragraph=%g index=%g want=%g", width, p.height, editor.heights.Total(), wantHeight)
+		}
+	}
+	if len(typo.calls) != count {
+		t.Fatal("width-only reflow created layouts")
+	}
+}
+
+func TestTextViewReflowUpdatesOnlyOneSharedModelView(t *testing.T) {
+	left, _, _ := newEditorFixture(t, "abcdefghijklmnopqrst")
+	right := NewTextView()
+	right.SetModel(left.model)
+	win := &window{}
+	win.SetWidget(right)
+	t.Cleanup(func() { win.SetWidget(nil) })
+	right.Arrange(geometry.Rect(0, 0, 209, 108))
+	left.LayoutVisible(geometry.Size{Width: 109, Height: 108}, geometry.Point{})
+	if left.paragraph(0).height != 40 || right.paragraph(0).height != 20 {
+		t.Fatal("reflow did not preserve independent view layouts")
+	}
+}
