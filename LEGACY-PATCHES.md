@@ -38,3 +38,12 @@ the fetched module to declare that version's own path, so this fork cannot be
 required or replaced by version while it keeps the upstream path. The
 `module-path-rename` branch declares `github.com/forbe/goui-legacy` and rewrites
 every internal import to match; use it if you want `require` to work.
+
+## Unrelated old-Windows limit: bundled fonts
+
+`typography.Context.AddFont` (`context_windows.go:94`) builds a custom font set and
+collection, which needs `IDWriteFactory3` — Windows 10 only (Fall Creators Update per
+Microsoft's custom-font-sets doc). It also takes a file path, and no `gui`/`ui` layer
+call exposes it. On Windows 7 an application font cannot reach DirectWrite by family
+name through this API; the app currently resolves "Alibaba PuHuiTi 2.0" from the
+system font collection, i.e. that font must be installed there.
