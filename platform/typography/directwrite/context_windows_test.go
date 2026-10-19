@@ -2,6 +2,7 @@ package directwrite
 
 import (
 	"bytes"
+	"errors"
 	"github.com/goexlib/cgo"
 	"github.com/golang-gui/goui/platform/windows/sdk/com"
 	"image/color"
@@ -13,6 +14,7 @@ import (
 	"github.com/golang-gui/goui/platform/typography"
 	"github.com/golang-gui/goui/platform/typography/internal/typographytest"
 	"github.com/golang-gui/goui/platform/windows/sdk/dwrite"
+	"golang.org/x/image/font/gofont/goregular"
 )
 
 func TestMain(m *testing.M) { os.Exit(typographytest.Main(m)) }
@@ -97,6 +99,54 @@ func TestFontRegistration(t *testing.T) {
 	}
 	if c.fontCollection != collection {
 		t.Fatal("failed registration replaced collection")
+	}
+	if _, err := layout.Rasterize(1, nil); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestInMemoryFontRegistration registers the fixture faces from bytes only: nothing
+// is written to disk, and "Go" is a real family rather than a fallback alias.
+func TestInMemoryFontRegistration(t *testing.T) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	ctx, err := NewContext()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ctx.Destroy()
+	c := ctx.(*Context)
+	data := goregular.TTF
+	if err := c.AddFontData(data); err != nil {
+		if errors.Is(err, errors.ErrUnsupported) {
+			t.Skipf("in-memory fonts need DirectWrite 1.3: %v", err)
+		}
+		t.Fatal(err)
+	}
+	_, exists, hr := c.fonts().FindFamilyName("Go")
+	if hr.Failed() || !exists {
+		t.Fatalf("in-memory font missing from DirectWrite collection: %v", hr)
+	}
+	layout, err := ctx.NewTextLayout("Go", typography.TextFormat{Font: typography.FontInfo{Family: "Go", Size: 14}}, 200, 80)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer layout.Destroy()
+	collection := c.fontCollection
+	if err := c.AddFontData(data); err != nil {
+		t.Fatal(err)
+	}
+	if c.fontCollection != collection {
+		t.Fatal("duplicate in-memory registration replaced collection")
+	}
+	if err := c.AddFontData(nil); err == nil {
+		t.Fatal("empty font data accepted")
+	}
+	if err := c.AddFontData([]byte("not an OpenType font")); err == nil {
+		t.Fatal("invalid font data accepted")
+	}
+	if c.fontCollection != collection {
+		t.Fatal("failed in-memory registration replaced collection")
 	}
 	if _, err := layout.Rasterize(1, nil); err != nil {
 		t.Fatal(err)

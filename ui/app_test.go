@@ -580,6 +580,8 @@ func (a *windowTestApplication) OpenURL(string) error { panic("unexpected OpenUR
 
 func (a *windowTestApplication) OpenPath(string) error { panic("unexpected OpenPath") }
 
+func (a *windowTestApplication) AddFontData([]byte) error { panic("unexpected AddFontData") }
+
 func (a *windowTestApplication) Platform() platform.Platform {
 	return nil
 }

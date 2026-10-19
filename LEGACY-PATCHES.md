@@ -39,18 +39,27 @@ required or replaced by version while it keeps the upstream path. The
 `module-path-rename` branch declares `github.com/forbe/goui-legacy` and rewrites
 every internal import to match; use it if you want `require` to work.
 
-## Unrelated old-Windows limit: bundled fonts
+## Bundled fonts, and what old Windows can do with them
 
-`typography.Context.AddFont` (`context_windows.go:94`) builds a custom font set and
-collection, which needs `IDWriteFactory3` — Windows 10 only (Fall Creators Update per
-Microsoft's custom-font-sets doc). It also takes a file path, and no `gui`/`ui` layer
-call exposes it. On Windows 7 an application font cannot reach DirectWrite by family
-name through this API.
+`theme/fonts` holds the shipped font files as bytes; `ui.App.AddFontData` and
+`gui.Application.AddFontData` register them with DirectWrite without a file on disk.
+Registration is idempotent per content hash, so calling it from every rebuild costs one
+hash. The route needs the factory's in-memory font loader, `IDWriteFactory5`, which
+Microsoft lists from Windows 10 build 15063 up.
 
-Asking for a family that is not installed is not an error either: DirectWrite picks a
-fallback face and draws. Measured through this package on Windows 11, an unknown family
-and the empty family give identical layout metrics (`w=243.31 h=24.89`, mixed
-Chinese/Latin string at 14 pt), while the installed `Alibaba PuHuiTi 2.0` measures
-`w=251.81 h=26.13`. So the `theme/fonts/*.ttf` copies shipped here are inert packaging:
-a machine without that font shows its own default face, still legible but not the
-bundled design.
+Older systems cannot take it: the path-based `typography.Context.AddFont` needs
+`IDWriteFactory3` (Windows 10) and the in-memory loader needs `IDWriteFactory5`, so on
+Windows 7 `AddFontData` reports `errors.ErrUnsupported` and nothing else changes.
+
+Asking for a family that is not installed is not an error: DirectWrite picks a fallback
+face and draws. Measured on Windows 11, an unknown family and the empty family give
+identical layout metrics (`w=243.31 h=24.89`, mixed Chinese/Latin string at 14 pt),
+while `Alibaba PuHuiTi 2.0` measures `w=251.81 h=26.13`. A machine that cannot register
+the bundled bytes therefore shows its own default face, still legible but not the
+bundled design; `platform/typography/context.go:53` states the same contract ("the
+selected face may be a fallback").
+
+Reaching the loader required a binding fix: `Factory5Class` did not embed
+`Factory4Class`, so its five methods were read from the top of the vtable and
+`CreateInMemoryFontFileLoader` called `IUnknown::AddRef` instead — which "succeeded"
+while leaving the loader nil.

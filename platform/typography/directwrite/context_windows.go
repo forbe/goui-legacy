@@ -1,6 +1,7 @@
 package directwrite
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"image/color"
@@ -35,7 +36,13 @@ type Context struct {
 	fontSet        *dwrite.FontSet
 	fontCollection *dwrite.FontCollection1
 	fontFiles      map[string]bool
+	// fontData holds the bytes already registered through AddFontData, keyed by
+	// their hash so a rebuild that re-sends the same font costs nothing.
+	fontData       map[[sha256.Size]byte]bool
+	inMemoryLoader *dwrite.InMemoryFontFileLoader
 }
+
+var _ typography.FontDataAdder = (*Context)(nil)
 
 func NewContext() (_ typography.Context, err error) {
 	// COM is already initialized as STA by the platform layer (newPlatform).
@@ -74,6 +81,11 @@ func (c *Context) Destroy() {
 		c.fontSet.Release()
 		c.fontSet = nil
 	}
+	if c.inMemoryLoader != nil {
+		c.dwFactory.UnregisterFontFileLoader(&c.inMemoryLoader.FontFileLoader)
+		c.inMemoryLoader.Release()
+		c.inMemoryLoader = nil
+	}
 	if c.fontFactory != nil {
 		c.fontFactory.Release()
 		c.fontFactory = nil
@@ -99,17 +111,96 @@ func (c *Context) AddFont(fontFile string) error {
 	if c.fontFiles[path] {
 		return nil
 	}
-	if c.fontFactory == nil {
-		c.fontFactory, err = dwrite.CreateFactory[dwrite.Factory3](dwrite.DWRITE_FACTORY_TYPE_SHARED, dwrite.IID_IDWriteFactory3)
-		if err != nil {
-			return fmt.Errorf("create font factory: %w", err)
-		}
+	if err = c.ensureFontFactory(); err != nil {
+		return err
 	}
 	file, hr := c.fontFactory.CreateFontFileReference(path)
 	if hr.Failed() {
 		return fmt.Errorf("create font file: %w", hr)
 	}
 	defer file.Release()
+	if err = c.addFontFile(file); err != nil {
+		return err
+	}
+	if c.fontFiles == nil {
+		c.fontFiles = make(map[string]bool)
+	}
+	c.fontFiles[path] = true
+	return nil
+}
+
+// AddFontData registers the faces held in data, so an application needs no font file
+// on disk. The route needs DirectWrite's in-memory font loader, version 1.3, which
+// Windows 10 1703 and later ship. Older systems, Windows 7 included, report
+// errors.ErrUnsupported and the family the app asks for stays a fallback face.
+func (c *Context) AddFontData(data []byte) error {
+	if len(data) == 0 {
+		return errors.New("empty font data")
+	}
+	key := sha256.Sum256(data)
+	if c.fontData[key] {
+		return nil
+	}
+	if err := c.ensureFontFactory(); err != nil {
+		return err
+	}
+	loader, err := c.ensureInMemoryLoader()
+	if err != nil {
+		return err
+	}
+	file, hr := loader.CreateInMemoryFontFileReference(c.dwFactory, data, nil)
+	if hr.Failed() {
+		return fmt.Errorf("create in-memory font file: %w", hr)
+	}
+	defer file.Release()
+	if err = c.addFontFile(file); err != nil {
+		return err
+	}
+	if c.fontData == nil {
+		c.fontData = make(map[[sha256.Size]byte]bool)
+	}
+	c.fontData[key] = true
+	return nil
+}
+
+func (c *Context) ensureFontFactory() error {
+	if c.fontFactory != nil {
+		return nil
+	}
+	factory, err := dwrite.CreateFactory[dwrite.Factory3](dwrite.DWRITE_FACTORY_TYPE_SHARED, dwrite.IID_IDWriteFactory3)
+	if err != nil {
+		return fmt.Errorf("create font factory: %w", err)
+	}
+	c.fontFactory = factory
+	return nil
+}
+
+// ensureInMemoryLoader creates the loader once. Microsoft requires the caller to
+// unregister it, which Destroy does; the factory keeps it alive in the meantime.
+func (c *Context) ensureInMemoryLoader() (*dwrite.InMemoryFontFileLoader, error) {
+	if c.inMemoryLoader != nil {
+		return c.inMemoryLoader, nil
+	}
+	var queried *com.Unknown
+	if hr := c.dwFactory.QueryInterface(dwrite.IID_IDWriteFactory5, &queried); hr.Failed() || queried == nil {
+		return nil, fmt.Errorf("in-memory fonts need DirectWrite 1.3: %w", errors.ErrUnsupported)
+	}
+	factory5 := (*dwrite.Factory5)(unsafe.Pointer(queried))
+	loader, hr := factory5.CreateInMemoryFontFileLoader()
+	factory5.Release()
+	if hr.Failed() {
+		return nil, fmt.Errorf("create in-memory font loader: %w", hr)
+	}
+	if hr = c.dwFactory.RegisterFontFileLoader(&loader.FontFileLoader); hr.Failed() {
+		loader.Release()
+		return nil, fmt.Errorf("register in-memory font loader: %w", hr)
+	}
+	c.inMemoryLoader = loader
+	return loader, nil
+}
+
+// addFontFile places the faces held by file ahead of the faces already available.
+func (c *Context) addFontFile(file *dwrite.FontFile) error {
 	supported, _, _, count, hr := file.Analyze()
 	if hr.Failed() {
 		return fmt.Errorf("analyze font file: %w", hr)
@@ -162,10 +253,6 @@ func (c *Context) AddFont(fontFile string) error {
 		c.fontSet.Release()
 	}
 	c.fontSet, c.fontCollection = set, collection
-	if c.fontFiles == nil {
-		c.fontFiles = make(map[string]bool)
-	}
-	c.fontFiles[path] = true
 	return nil
 }
 

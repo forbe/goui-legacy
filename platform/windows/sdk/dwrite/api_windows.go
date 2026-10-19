@@ -171,6 +171,7 @@ type Factory4Class struct {
 var IID_IDWriteFactory5 = com.DefineGuid(0x958db99a, 0xbe2a, 0x4f09, 0xaf, 0x7d, 0x65, 0x18, 0x98, 0x03, 0xd1, 0xd3)
 
 type Factory5Class struct {
+	Factory4Class
 	IDWriteFactory5_CreateFontSetBuilder cgo.Symbol //HRESULT(IDWriteFactory5 *This, IDWriteFontSetBuilder1 **fontset_builder)
 	CreateInMemoryFontFileLoader         cgo.Symbol //HRESULT(IDWriteFactory5 *This, IDWriteInMemoryFontFileLoader **loader)
 	CreateHttpFontFileLoader             cgo.Symbol //HRESULT(IDWriteFactory5 *This, const WCHAR *referrer_url, const WCHAR *extra_headers, IDWriteRemoteFontFileLoader **loader)

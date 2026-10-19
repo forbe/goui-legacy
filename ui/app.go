@@ -48,6 +48,14 @@ type App interface {
 	Settings() Settings
 	// FileDialog returns the system file dialog view (never nil).
 	FileDialog() FileDialog
+	// AddFontData registers font file bytes with the typography backend, so a family
+	// the system does not have installed can still be used. It runs on the GUI thread
+	// and returns the native result, like OpenURL. Re-sending the same bytes is a
+	// no-op, which keeps it safe to call from every rebuild. A system without
+	// in-memory font support reports errors.ErrUnsupported and the layout keeps its
+	// fallback face; callers that accept that should test with errors.Is. The bytes
+	// must stay accessible for as long as the run uses the font.
+	AddFontData(data []byte) error
 	// OpenURL asks the system's registered handler to open an absolute URL,
 	// including custom schemes. It executes on the GUI thread and returns the
 	// native request result, not external app completion. It may block during
@@ -160,6 +168,12 @@ func (a *app) Sync(f func()) {
 		// Run has returned, so no in-flight UI callback can still be writing
 		// results. Queued work that did not execute is discarded.
 	}
+}
+
+func (a *app) AddFontData(data []byte) (err error) {
+	err = ErrAppStopped
+	a.Sync(func() { err = a.gui.AddFontData(data) })
+	return
 }
 
 func (a *app) OpenURL(rawURL string) (err error) {

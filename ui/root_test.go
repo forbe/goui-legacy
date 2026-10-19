@@ -460,6 +460,8 @@ type testApplication struct {
 
 func (a *testApplication) NewTimer() *gui.Timer { panic("unexpected NewTimer") }
 
+func (a *testApplication) AddFontData([]byte) error { panic("unexpected AddFontData") }
+
 func newTestApplication() *testApplication {
 	return new(testApplication)
 }

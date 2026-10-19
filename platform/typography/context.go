@@ -32,6 +32,18 @@ type Context interface {
 	NewTextLayout(text string, format TextFormat, width, height float32) (TextLayout, error)
 }
 
+// FontDataAdder is an optional Context capability: it registers the font faces held
+// in file bytes, so an application needs no font file on disk. Support depends on the
+// backend and the system version; a Context that cannot load fonts from memory does
+// not implement it, and the layers above report errors.ErrUnsupported.
+//
+// Like AddFont, registration is idempotent, a failure leaves the fonts already
+// available in place, and only layouts created afterward see the new faces. The
+// caller keeps the bytes accessible while the fonts created from them are in use.
+type FontDataAdder interface {
+	AddFontData(data []byte) error
+}
+
 // TextFormat describes the base formatting and paragraph behavior of a
 // TextLayout. Range formatting applied later is stored by the layout and is not
 // reflected back into this value.

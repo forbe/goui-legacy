@@ -15,6 +15,12 @@ import (
 type Application interface {
 	Platform() platform.Platform
 	Typography() typography.Context
+	// AddFontData makes the font families held in data available to the typography
+	// backend without a font file on disk. Call on the GUI thread, before the layout
+	// that uses the family. A backend or system version that cannot load fonts from
+	// memory reports errors.ErrUnsupported; the bytes must stay accessible while the
+	// fonts created from them are in use.
+	AddFontData(data []byte) error
 	// Clipboard returns the system clipboard, or nil if it is unavailable.
 	Clipboard() Clipboard
 	// Settings returns system settings as usable values. Never nil.
@@ -147,6 +153,14 @@ func (a *application) Platform() platform.Platform {
 
 func (a *application) Typography() typography.Context {
 	return a.typo
+}
+
+func (a *application) AddFontData(data []byte) error {
+	adder, ok := a.typo.(typography.FontDataAdder)
+	if !ok {
+		return fmt.Errorf("typography backend %q: %w", a.typo.Name(), errors.ErrUnsupported)
+	}
+	return adder.AddFontData(data)
 }
 
 func (a *application) Clipboard() Clipboard {
