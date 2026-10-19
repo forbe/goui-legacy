@@ -5,7 +5,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/golang-gui/goui/style"
+	"github.com/forbe/goui-legacy/style"
 )
 
 // Register adds a third-party control's rules. Call from package init, before

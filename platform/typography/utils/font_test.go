@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"github.com/golang-gui/goui/platform/typography"
+	"github.com/forbe/goui-legacy/platform/typography"
 	"testing"
 )
 

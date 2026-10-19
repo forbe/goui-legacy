@@ -16,13 +16,13 @@ import (
 	"unsafe"
 
 	"github.com/goexlib/cgo"
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/platform/common"
-	"github.com/golang-gui/goui/platform/dragdrop"
-	"github.com/golang-gui/goui/platform/events"
-	"github.com/golang-gui/goui/platform/windows/sdk/com"
-	"github.com/golang-gui/goui/platform/windows/sdk/shell"
-	"github.com/golang-gui/goui/platform/windows/sdk/winapi"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/platform/common"
+	"github.com/forbe/goui-legacy/platform/dragdrop"
+	"github.com/forbe/goui-legacy/platform/events"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/com"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/shell"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/winapi"
 	xdraw "golang.org/x/image/draw"
 )
 

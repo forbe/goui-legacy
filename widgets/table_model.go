@@ -1,6 +1,6 @@
 package widgets
 
-import "github.com/golang-gui/goui/gui"
+import "github.com/forbe/goui-legacy/gui"
 
 // TableModel supplies records with nonempty, unique, stable model-local IDs.
 // Queries are synchronous and must not emit Items. Publish complete changes

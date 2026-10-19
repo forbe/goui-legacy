@@ -5,13 +5,13 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/layout"
-	"github.com/golang-gui/goui/platform/typography"
-	"github.com/golang-gui/goui/platform/typography/pango"
-	"github.com/golang-gui/goui/style"
-	"github.com/golang-gui/goui/theme/modern"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/layout"
+	"github.com/forbe/goui-legacy/platform/typography"
+	"github.com/forbe/goui-legacy/platform/typography/pango"
+	"github.com/forbe/goui-legacy/style"
+	"github.com/forbe/goui-legacy/theme/modern"
 )
 
 type tabTypographyApp struct {

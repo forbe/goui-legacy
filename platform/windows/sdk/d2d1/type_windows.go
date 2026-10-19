@@ -1,6 +1,6 @@
 package d2d1
 
-import "github.com/golang-gui/goui/platform/windows/sdk/dxgi"
+import "github.com/forbe/goui-legacy/platform/windows/sdk/dxgi"
 
 type (
 	Enum = uint32

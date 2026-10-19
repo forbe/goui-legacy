@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang-gui/goui/platform"
+	"github.com/forbe/goui-legacy/platform"
 )
 
 // quitCountLoop is a minimal EventLoop that only records Quit calls; removeWindow

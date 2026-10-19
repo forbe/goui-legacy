@@ -1,10 +1,10 @@
 package ui
 
 import (
-	"github.com/golang-gui/goui/core/optional"
-	"github.com/golang-gui/goui/gui"
-	baseui "github.com/golang-gui/goui/ui"
-	"github.com/golang-gui/goui/widgets"
+	"github.com/forbe/goui-legacy/core/optional"
+	"github.com/forbe/goui-legacy/gui"
+	baseui "github.com/forbe/goui-legacy/ui"
+	"github.com/forbe/goui-legacy/widgets"
 )
 
 type ProgressShape = widgets.ProgressShape

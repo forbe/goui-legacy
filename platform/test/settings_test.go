@@ -6,8 +6,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/golang-gui/goui/platform"
-	"github.com/golang-gui/goui/platform/common"
+	"github.com/forbe/goui-legacy/platform"
+	"github.com/forbe/goui-legacy/platform/common"
 )
 
 func TestSettings(t *testing.T) {

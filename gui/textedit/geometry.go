@@ -4,8 +4,8 @@ import (
 	"math"
 	"sort"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/platform/typography"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/platform/typography"
 )
 
 // Position identifies a UTF-8 byte boundary and its visual affinity.

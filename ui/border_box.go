@@ -1,8 +1,8 @@
 package ui
 
 import (
-	"github.com/golang-gui/goui/core/optional"
-	"github.com/golang-gui/goui/gui"
+	"github.com/forbe/goui-legacy/core/optional"
+	"github.com/forbe/goui-legacy/gui"
 )
 
 // BorderBoxView reconciles the GUI single-child frame. Resizing and cursor

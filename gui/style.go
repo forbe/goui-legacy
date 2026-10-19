@@ -3,11 +3,11 @@ package gui
 import (
 	"sync"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/platform/graphics"
-	"github.com/golang-gui/goui/platform/typography"
-	"github.com/golang-gui/goui/style"
-	"github.com/golang-gui/goui/theme/basic"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/platform/graphics"
+	"github.com/forbe/goui-legacy/platform/typography"
+	"github.com/forbe/goui-legacy/style"
+	"github.com/forbe/goui-legacy/theme/basic"
 )
 
 const (

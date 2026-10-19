@@ -6,8 +6,8 @@ import (
 	"image"
 	"sync"
 
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/icon/internal/pixels"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/icon/internal/pixels"
 )
 
 var _ gui.IconSource = (*Image)(nil)

@@ -12,7 +12,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/golang-gui/goui/platform/common"
+	"github.com/forbe/goui-legacy/platform/common"
 )
 
 const maxCredential = 4 << 20

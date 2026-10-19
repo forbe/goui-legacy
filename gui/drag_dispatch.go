@@ -6,11 +6,11 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/platform"
-	"github.com/golang-gui/goui/platform/dragdrop"
-	"github.com/golang-gui/goui/platform/events"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/platform"
+	"github.com/forbe/goui-legacy/platform/dragdrop"
+	"github.com/forbe/goui-legacy/platform/events"
 )
 
 type dragHostState struct {

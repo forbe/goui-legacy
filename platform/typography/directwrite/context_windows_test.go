@@ -3,16 +3,16 @@ package directwrite
 import (
 	"bytes"
 	"github.com/goexlib/cgo"
-	"github.com/golang-gui/goui/platform/windows/sdk/com"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/com"
 	"image/color"
 	"image/png"
 	"os"
 	"runtime"
 	"testing"
 
-	"github.com/golang-gui/goui/platform/typography"
-	"github.com/golang-gui/goui/platform/typography/internal/typographytest"
-	"github.com/golang-gui/goui/platform/windows/sdk/dwrite"
+	"github.com/forbe/goui-legacy/platform/typography"
+	"github.com/forbe/goui-legacy/platform/typography/internal/typographytest"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/dwrite"
 )
 
 func TestMain(m *testing.M) { os.Exit(typographytest.Main(m)) }

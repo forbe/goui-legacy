@@ -3,9 +3,9 @@ package gui
 import (
 	"runtime"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/platform/events"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/platform/events"
 )
 
 // ContextMenuEventController interprets pointer and keyboard requests. It does

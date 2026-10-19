@@ -4,7 +4,7 @@
 // It is self-contained: import it for its side effect and set GOUI_DEV_ADDR to
 // enable it. There is no construction API — the server starts itself.
 //
-//	import _ "github.com/golang-gui/goui/gui/dev"
+//	import _ "github.com/forbe/goui-legacy/gui/dev"
 //	GOUI_DEV_ADDR=:8888 ./app   // omit the variable to disable
 //
 // Two orthogonal switches keep it out of shipped binaries:

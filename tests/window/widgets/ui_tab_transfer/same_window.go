@@ -5,12 +5,12 @@ import (
 	"log"
 	"slices"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/layout"
-	"github.com/golang-gui/goui/theme/modern"
-	"github.com/golang-gui/goui/ui"
-	"github.com/golang-gui/goui/widgets"
-	wui "github.com/golang-gui/goui/widgets/ui"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/layout"
+	"github.com/forbe/goui-legacy/theme/modern"
+	"github.com/forbe/goui-legacy/ui"
+	"github.com/forbe/goui-legacy/widgets"
+	wui "github.com/forbe/goui-legacy/widgets/ui"
 )
 
 // 同 Root 仍然需要转移协调记录，而不是只修改 GUI 父节点。

@@ -3,7 +3,7 @@ package modern
 import (
 	"image/color"
 
-	"github.com/golang-gui/goui/style"
+	"github.com/forbe/goui-legacy/style"
 )
 
 // Selected checkboxes and radios use a solid accent with a white mark.

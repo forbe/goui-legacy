@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang-gui/goui/platform"
+	"github.com/forbe/goui-legacy/platform"
 )
 
 // TestClipboard exercises a same-process SetText -> RequestText round-trip.

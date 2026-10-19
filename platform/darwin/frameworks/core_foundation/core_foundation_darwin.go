@@ -4,7 +4,7 @@ import (
 	"runtime"
 	"unsafe"
 
-	"github.com/golang-gui/goui/platform/darwin/frameworks/utils"
+	"github.com/forbe/goui-legacy/platform/darwin/frameworks/utils"
 
 	"github.com/ebitengine/purego/objc"
 	"github.com/goexlib/cgo"

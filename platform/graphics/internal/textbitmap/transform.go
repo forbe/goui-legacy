@@ -3,7 +3,7 @@ package textbitmap
 import (
 	"math"
 
-	"github.com/golang-gui/goui/core/geometry"
+	"github.com/forbe/goui-legacy/core/geometry"
 )
 
 // RasterScale returns the bitmap scale needed to avoid magnifying

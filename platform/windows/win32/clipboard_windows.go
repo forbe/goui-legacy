@@ -5,8 +5,8 @@ import (
 	"unicode/utf16"
 	"unsafe"
 
-	"github.com/golang-gui/goui/platform/common"
-	"github.com/golang-gui/goui/platform/windows/sdk/winapi"
+	"github.com/forbe/goui-legacy/platform/common"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/winapi"
 )
 
 type clipboard struct{ platform *Platform }

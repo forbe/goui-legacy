@@ -5,13 +5,13 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/platform/common"
-	"github.com/golang-gui/goui/platform/events"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/platform/common"
+	"github.com/forbe/goui-legacy/platform/events"
 
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/appkit"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/core_graphics"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/foundation"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/appkit"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/core_graphics"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/foundation"
 )
 
 // inputMethod is the cocoa InputMethod. The content view is an NSTextInputClient

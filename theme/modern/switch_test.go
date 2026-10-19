@@ -4,7 +4,7 @@ import (
 	"image/color"
 	"testing"
 
-	"github.com/golang-gui/goui/style"
+	"github.com/forbe/goui-legacy/style"
 )
 
 func TestSwitchTheme(t *testing.T) {

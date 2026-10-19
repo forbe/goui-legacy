@@ -3,9 +3,9 @@ package x11
 import (
 	"errors"
 
-	"github.com/golang-gui/goui/platform/common"
-	"github.com/golang-gui/goui/platform/linux/libs/xcursor"
-	"github.com/golang-gui/goui/platform/linux/libs/xlib"
+	"github.com/forbe/goui-legacy/platform/common"
+	"github.com/forbe/goui-legacy/platform/linux/libs/xcursor"
+	"github.com/forbe/goui-legacy/platform/linux/libs/xlib"
 )
 
 var errNoCursor = errors.New("x11: cursor not supported")

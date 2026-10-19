@@ -5,7 +5,7 @@ import (
 	"math"
 	"unicode/utf8"
 
-	"github.com/golang-gui/goui/platform/typography"
+	"github.com/forbe/goui-legacy/platform/typography"
 )
 
 // ValidateTabWidth keeps two Pango-unit stops representable in int32.

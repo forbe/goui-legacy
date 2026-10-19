@@ -3,8 +3,8 @@ package gui
 import (
 	"testing"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/platform/events"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/platform/events"
 )
 
 // Platform classification coverage moved here from widgets/tab_bar_test.go:

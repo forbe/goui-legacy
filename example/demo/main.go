@@ -14,17 +14,17 @@ import (
 	"log"
 	"time"
 
-	"github.com/golang-gui/goui/animation"
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/example/demo/resource"
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/layout"
-	"github.com/golang-gui/goui/mlang"
-	"github.com/golang-gui/goui/style"
-	"github.com/golang-gui/goui/theme/modern"
-	"github.com/golang-gui/goui/ui"
-	"github.com/golang-gui/goui/widgets"
-	wui "github.com/golang-gui/goui/widgets/ui"
+	"github.com/forbe/goui-legacy/animation"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/example/demo/resource"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/layout"
+	"github.com/forbe/goui-legacy/mlang"
+	"github.com/forbe/goui-legacy/style"
+	"github.com/forbe/goui-legacy/theme/modern"
+	"github.com/forbe/goui-legacy/ui"
+	"github.com/forbe/goui-legacy/widgets"
+	wui "github.com/forbe/goui-legacy/widgets/ui"
 )
 
 var pageNames = []mlang.Getter{resource.Basic, resource.Text, resource.Layout, resource.Data, resource.Tabs, resource.Overlays, resource.Graphics, resource.System, resource.Windows}

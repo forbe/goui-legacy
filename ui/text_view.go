@@ -1,9 +1,9 @@
 package ui
 
 import (
-	"github.com/golang-gui/goui/core/bits"
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/gui"
+	"github.com/forbe/goui-legacy/core/bits"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/gui"
 )
 
 // The UI layer uses GUI's document and UTF-8 editing values directly.

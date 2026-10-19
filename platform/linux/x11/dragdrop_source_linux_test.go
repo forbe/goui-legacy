@@ -3,7 +3,7 @@ package x11
 import (
 	"testing"
 
-	"github.com/golang-gui/goui/platform/linux/libs/xlib"
+	"github.com/forbe/goui-legacy/platform/linux/libs/xlib"
 )
 
 func TestXDNDLocalOnlyOfferStaysInProcess(t *testing.T) {

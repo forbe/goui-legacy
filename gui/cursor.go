@@ -1,6 +1,6 @@
 package gui
 
-import "github.com/golang-gui/goui/platform"
+import "github.com/forbe/goui-legacy/platform"
 
 // Cursor is a mouse-pointer appearance: either a standard shape or (in the
 // future) a custom image/animation.

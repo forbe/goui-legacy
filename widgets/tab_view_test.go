@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/golang-gui/goui/gui"
+	"github.com/forbe/goui-legacy/gui"
 )
 
 // 页面管理与关闭请求。

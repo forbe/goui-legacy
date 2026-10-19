@@ -3,9 +3,9 @@ package win32
 import (
 	"unsafe"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/platform/events"
-	"github.com/golang-gui/goui/platform/windows/sdk/winapi"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/platform/events"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/winapi"
 )
 
 // logicalPoint converts a physical client pixel position to logical (DIP)

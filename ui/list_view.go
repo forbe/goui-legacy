@@ -1,9 +1,9 @@
 package ui
 
 import (
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/internal/identity"
-	"github.com/golang-gui/goui/layout"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/internal/identity"
+	"github.com/forbe/goui-legacy/layout"
 )
 
 // ListViewView is the declarative wrapper of gui.ListView. The item closure

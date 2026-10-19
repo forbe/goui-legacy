@@ -6,16 +6,16 @@ import (
 	"time"
 
 	"github.com/goexlib/mathx"
-	"github.com/golang-gui/goui/core/colors"
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/gui/textedit"
-	"github.com/golang-gui/goui/internal/resource"
-	"github.com/golang-gui/goui/layout"
-	"github.com/golang-gui/goui/mlang"
-	"github.com/golang-gui/goui/platform/graphics"
-	"github.com/golang-gui/goui/platform/typography"
-	"github.com/golang-gui/goui/style"
+	"github.com/forbe/goui-legacy/core/colors"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/gui/textedit"
+	"github.com/forbe/goui-legacy/internal/resource"
+	"github.com/forbe/goui-legacy/layout"
+	"github.com/forbe/goui-legacy/mlang"
+	"github.com/forbe/goui-legacy/platform/graphics"
+	"github.com/forbe/goui-legacy/platform/typography"
+	"github.com/forbe/goui-legacy/style"
 )
 
 type textParagraph struct {

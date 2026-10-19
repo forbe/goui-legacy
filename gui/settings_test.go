@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang-gui/goui/mlang"
-	"github.com/golang-gui/goui/platform"
+	"github.com/forbe/goui-legacy/mlang"
+	"github.com/forbe/goui-legacy/platform"
 )
 
 type settingsTestSource struct {

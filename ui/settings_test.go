@@ -6,9 +6,9 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/style"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/style"
 )
 
 type testSettings struct {

@@ -4,8 +4,8 @@ import (
 	"math"
 	"testing"
 
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/core_graphics"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/foundation"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/core_graphics"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/foundation"
 )
 
 // Pure size conversion: no AppKit calls or desktop connection.

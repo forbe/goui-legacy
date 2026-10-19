@@ -8,14 +8,14 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/platform/common"
-	"github.com/golang-gui/goui/platform/events"
-	"github.com/golang-gui/goui/platform/graphics"
-	"github.com/golang-gui/goui/platform/graphics/direct2d"
-	"github.com/golang-gui/goui/platform/internal/workarea"
-	"github.com/golang-gui/goui/platform/windows/sdk/dcomp"
-	"github.com/golang-gui/goui/platform/windows/sdk/winapi"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/platform/common"
+	"github.com/forbe/goui-legacy/platform/events"
+	"github.com/forbe/goui-legacy/platform/graphics"
+	"github.com/forbe/goui-legacy/platform/graphics/direct2d"
+	"github.com/forbe/goui-legacy/platform/internal/workarea"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/dcomp"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/winapi"
 
 	"github.com/goexlib/cgo"
 )

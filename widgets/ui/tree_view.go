@@ -3,13 +3,13 @@ package ui
 import (
 	"slices"
 
-	"github.com/golang-gui/goui/core/bits"
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/internal/identity"
-	"github.com/golang-gui/goui/layout"
-	baseui "github.com/golang-gui/goui/ui"
-	"github.com/golang-gui/goui/widgets"
+	"github.com/forbe/goui-legacy/core/bits"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/internal/identity"
+	"github.com/forbe/goui-legacy/layout"
+	baseui "github.com/forbe/goui-legacy/ui"
+	"github.com/forbe/goui-legacy/widgets"
 )
 
 // TreeViewView is a thin model-and-row-builder binding. Omitted selection,

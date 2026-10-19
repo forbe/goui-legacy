@@ -1,6 +1,6 @@
 package xrender
 
-import "github.com/golang-gui/goui/platform/linux/libs/xlib"
+import "github.com/forbe/goui-legacy/platform/linux/libs/xlib"
 
 type DirectFormat struct {
 	Red, RedMask, Green, GreenMask, Blue, BlueMask, Alpha, AlphaMask int16

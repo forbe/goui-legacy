@@ -10,8 +10,8 @@ import (
 	"math"
 	"sync"
 
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/icon/internal/pixels"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/icon/internal/pixels"
 	"github.com/golang-gui/oksvg"
 	"github.com/srwiley/rasterx"
 	"github.com/srwiley/scanFT"

@@ -3,7 +3,7 @@ package modern
 import (
 	"testing"
 
-	"github.com/golang-gui/goui/style"
+	"github.com/forbe/goui-legacy/style"
 )
 
 func TestPlaceholderColors(t *testing.T) {

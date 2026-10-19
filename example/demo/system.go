@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang-gui/goui/example/demo/resource"
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/theme/modern"
-	"github.com/golang-gui/goui/ui"
+	"github.com/forbe/goui-legacy/example/demo/resource"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/theme/modern"
+	"github.com/forbe/goui-legacy/ui"
 )
 
 type demoDropKind uint8
@@ -128,7 +128,7 @@ func (d *demo) systemPage() ui.View {
 					}
 				})
 			}),
-			ui.Button(resource.OpenWebsite()).OnClick(func() { d.result(resource.OpenBrowser(), d.app.OpenURL("https://github.com/golang-gui/goui")) }),
+			ui.Button(resource.OpenWebsite()).OnClick(func() { d.result(resource.OpenBrowser(), d.app.OpenURL("https://github.com/forbe/goui-legacy")) }),
 			ui.Button(resource.OpenSelected()).Enabled(len(d.files) > 0).OnClick(func() {
 				if len(d.files) > 0 {
 					d.result(resource.OpenPath(), d.app.OpenPath(d.files[0]))

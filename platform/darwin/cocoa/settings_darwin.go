@@ -4,11 +4,11 @@ import (
 	"image/color"
 	"strings"
 
-	"github.com/golang-gui/goui/platform/common"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/appkit"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/core_graphics"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/foundation"
-	"github.com/golang-gui/goui/platform/graphics"
+	"github.com/forbe/goui-legacy/platform/common"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/appkit"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/core_graphics"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/foundation"
+	"github.com/forbe/goui-legacy/platform/graphics"
 )
 
 type Settings struct{}

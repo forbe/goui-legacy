@@ -3,7 +3,7 @@ package gui
 import (
 	"sync"
 
-	"github.com/golang-gui/goui/core/signal"
+	"github.com/forbe/goui-legacy/core/signal"
 )
 
 // ListModel is the structural layer of a list view: item count and change

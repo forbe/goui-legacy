@@ -3,7 +3,7 @@ package ui
 import (
 	"testing"
 
-	"github.com/golang-gui/goui/widgets"
+	"github.com/forbe/goui-legacy/widgets"
 )
 
 func TestProgressBarReconcile(t *testing.T) {

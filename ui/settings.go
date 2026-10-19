@@ -3,7 +3,7 @@ package ui
 import (
 	"image/color"
 
-	"github.com/golang-gui/goui/gui"
+	"github.com/forbe/goui-legacy/gui"
 )
 
 // ColorScheme re-exports the gui color scheme so ui consumers use ui types only,

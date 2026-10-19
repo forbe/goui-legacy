@@ -3,10 +3,10 @@ package cocoa
 import (
 	"errors"
 
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/appkit"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/core_foundation"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/foundation"
-	"github.com/golang-gui/goui/platform/internal/eventloop"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/appkit"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/core_foundation"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/foundation"
+	"github.com/forbe/goui-legacy/platform/internal/eventloop"
 
 	"github.com/ebitengine/purego/objc"
 )

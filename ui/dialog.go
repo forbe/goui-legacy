@@ -3,7 +3,7 @@ package ui
 import (
 	"os"
 
-	"github.com/golang-gui/goui/gui"
+	"github.com/forbe/goui-legacy/gui"
 )
 
 // FileFilter defines a file type filter for dialog boxes.

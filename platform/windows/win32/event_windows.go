@@ -1,9 +1,9 @@
 package win32
 
 import (
-	"github.com/golang-gui/goui/platform/events"
-	"github.com/golang-gui/goui/platform/internal/eventloop"
-	"github.com/golang-gui/goui/platform/windows/sdk/winapi"
+	"github.com/forbe/goui-legacy/platform/events"
+	"github.com/forbe/goui-legacy/platform/internal/eventloop"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/winapi"
 )
 
 const eventLoopWakeMessage = winapi.WM_APP

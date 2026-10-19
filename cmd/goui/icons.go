@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/icon/svg"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/icon/svg"
 	"github.com/jackmordaunt/icns/v3"
 	"golang.org/x/image/draw"
 )

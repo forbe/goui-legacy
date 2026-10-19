@@ -5,9 +5,9 @@ import (
 	"image"
 	"image/draw"
 
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/platform/graphics"
-	"github.com/golang-gui/goui/platform/graphics/software"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/platform/graphics"
+	"github.com/forbe/goui-legacy/platform/graphics/software"
 )
 
 // Source generates final pixels using an isolated Software Painter. Keep Draw

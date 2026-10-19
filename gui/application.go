@@ -6,10 +6,10 @@ import (
 	"slices"
 	"time"
 
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/platform"
-	"github.com/golang-gui/goui/platform/typography"
-	"github.com/golang-gui/goui/style"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/platform"
+	"github.com/forbe/goui-legacy/platform/typography"
+	"github.com/forbe/goui-legacy/style"
 )
 
 type Application interface {

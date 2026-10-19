@@ -3,10 +3,10 @@ package widgets
 import (
 	"testing"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/layout"
-	"github.com/golang-gui/goui/platform/events"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/layout"
+	"github.com/forbe/goui-legacy/platform/events"
 )
 
 // 跨用例文件共享的固定布局与输入派发；不创建原生窗口。

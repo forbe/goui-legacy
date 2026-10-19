@@ -1,11 +1,11 @@
 package main
 
 import (
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/layout"
-	"github.com/golang-gui/goui/ui"
-	"github.com/golang-gui/goui/widgets"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/layout"
+	"github.com/forbe/goui-legacy/ui"
+	"github.com/forbe/goui-legacy/widgets"
 )
 
 // 用例自己的 Bin 记录正常布局下文档窗口的固定开销。

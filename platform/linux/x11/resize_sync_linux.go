@@ -2,8 +2,8 @@ package x11
 
 import (
 	"github.com/goexlib/cgo"
-	"github.com/golang-gui/goui/platform/linux/libs/xlib"
-	"github.com/golang-gui/goui/platform/linux/libs/xsync"
+	"github.com/forbe/goui-legacy/platform/linux/libs/xlib"
+	"github.com/forbe/goui-legacy/platform/linux/libs/xsync"
 )
 
 type resizeSyncState uint8

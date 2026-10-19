@@ -4,19 +4,19 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/platform/common"
-	"github.com/golang-gui/goui/platform/events"
-	"github.com/golang-gui/goui/platform/graphics"
-	"github.com/golang-gui/goui/platform/graphics/opengl"
-	"github.com/golang-gui/goui/platform/graphics/software"
-	"github.com/golang-gui/goui/platform/internal/desktopopen"
-	"github.com/golang-gui/goui/platform/typography"
-	"github.com/golang-gui/goui/platform/typography/coretext"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/platform/common"
+	"github.com/forbe/goui-legacy/platform/events"
+	"github.com/forbe/goui-legacy/platform/graphics"
+	"github.com/forbe/goui-legacy/platform/graphics/opengl"
+	"github.com/forbe/goui-legacy/platform/graphics/software"
+	"github.com/forbe/goui-legacy/platform/internal/desktopopen"
+	"github.com/forbe/goui-legacy/platform/typography"
+	"github.com/forbe/goui-legacy/platform/typography/coretext"
 
-	"github.com/golang-gui/goui/platform/darwin/frameworks"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/appkit"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/foundation"
+	"github.com/forbe/goui-legacy/platform/darwin/frameworks"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/appkit"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/foundation"
 )
 
 type Platform struct {

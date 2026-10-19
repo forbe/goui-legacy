@@ -5,8 +5,8 @@ import (
 	"image/color"
 	"testing"
 
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/platform/graphics"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/platform/graphics"
 )
 
 func TestSourceImage(t *testing.T) {

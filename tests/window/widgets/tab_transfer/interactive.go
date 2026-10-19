@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/layout"
-	"github.com/golang-gui/goui/theme/modern"
-	"github.com/golang-gui/goui/widgets"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/layout"
+	"github.com/forbe/goui-legacy/theme/modern"
+	"github.com/forbe/goui-legacy/widgets"
 )
 
 // Position only after the first normal frame: the WM may reparent a just

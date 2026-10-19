@@ -4,9 +4,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/platform/dragdrop"
-	"github.com/golang-gui/goui/platform/events"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/platform/dragdrop"
+	"github.com/forbe/goui-legacy/platform/events"
 )
 
 // 通过正常 Window.DispatchEvent 验证已获胜手势的接管，不伪造参与者状态。

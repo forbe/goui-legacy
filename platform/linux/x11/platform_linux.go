@@ -8,21 +8,21 @@ import (
 
 	"github.com/goexlib/cgo"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/platform/internal/desktopopen"
-	"github.com/golang-gui/goui/platform/linux/libs/glib"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/platform/internal/desktopopen"
+	"github.com/forbe/goui-legacy/platform/linux/libs/glib"
 
-	"github.com/golang-gui/goui/platform/common"
-	"github.com/golang-gui/goui/platform/dragdrop"
-	"github.com/golang-gui/goui/platform/events"
-	"github.com/golang-gui/goui/platform/graphics"
-	"github.com/golang-gui/goui/platform/graphics/opengl"
-	"github.com/golang-gui/goui/platform/graphics/software"
-	"github.com/golang-gui/goui/platform/linux/libs/libc"
-	"github.com/golang-gui/goui/platform/linux/libs/xlib"
-	"github.com/golang-gui/goui/platform/linux/libs/xsync"
-	"github.com/golang-gui/goui/platform/typography"
-	"github.com/golang-gui/goui/platform/typography/pango"
+	"github.com/forbe/goui-legacy/platform/common"
+	"github.com/forbe/goui-legacy/platform/dragdrop"
+	"github.com/forbe/goui-legacy/platform/events"
+	"github.com/forbe/goui-legacy/platform/graphics"
+	"github.com/forbe/goui-legacy/platform/graphics/opengl"
+	"github.com/forbe/goui-legacy/platform/graphics/software"
+	"github.com/forbe/goui-legacy/platform/linux/libs/libc"
+	"github.com/forbe/goui-legacy/platform/linux/libs/xlib"
+	"github.com/forbe/goui-legacy/platform/linux/libs/xsync"
+	"github.com/forbe/goui-legacy/platform/typography"
+	"github.com/forbe/goui-legacy/platform/typography/pango"
 )
 
 type Platform struct {

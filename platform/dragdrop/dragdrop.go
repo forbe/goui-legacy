@@ -12,7 +12,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/golang-gui/goui/core/geometry"
+	"github.com/forbe/goui-legacy/core/geometry"
 )
 
 // Action is a set of actions while advertising a source or target, and a

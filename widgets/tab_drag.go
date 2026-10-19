@@ -4,8 +4,8 @@ import (
 	"slices"
 	"time"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/gui"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/gui"
 )
 
 func (b *TabBar) beginDrag(page *TabPage, point geometry.Point) {

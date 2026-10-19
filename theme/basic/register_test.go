@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/golang-gui/goui/style"
+	"github.com/forbe/goui-legacy/style"
 )
 
 func mustPanic(t *testing.T, fn func()) {

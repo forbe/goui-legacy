@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/golang-gui/goui/mlang"
+	"github.com/forbe/goui-legacy/mlang"
 )
 
 func preserveLanguage(t *testing.T) {

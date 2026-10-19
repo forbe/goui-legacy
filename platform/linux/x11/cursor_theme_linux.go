@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"unsafe"
 
-	"github.com/golang-gui/goui/platform/linux/libs/xcursor"
-	"github.com/golang-gui/goui/platform/linux/libs/xlib"
+	"github.com/forbe/goui-legacy/platform/linux/libs/xcursor"
+	"github.com/forbe/goui-legacy/platform/linux/libs/xlib"
 )
 
 // cursorTheme owns display-local settings subscriptions, not GUI policy.

@@ -3,7 +3,7 @@ package style
 import (
 	"testing"
 
-	basestyle "github.com/golang-gui/goui/style"
+	basestyle "github.com/forbe/goui-legacy/style"
 )
 
 func TestDropDownFallbackRules(t *testing.T) {

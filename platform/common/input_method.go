@@ -1,6 +1,6 @@
 package common
 
-import "github.com/golang-gui/goui/core/geometry"
+import "github.com/forbe/goui-legacy/core/geometry"
 
 // InputMethod is a window's text-composition (IME) capability. A window's native
 // input method is woven into its key handling; this interface exposes the

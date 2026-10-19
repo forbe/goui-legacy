@@ -27,7 +27,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/golang-gui/goui/ui"
+	"github.com/forbe/goui-legacy/ui"
 )
 
 func main() {

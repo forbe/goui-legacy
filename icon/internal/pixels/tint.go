@@ -3,7 +3,7 @@ package pixels
 import (
 	"image"
 
-	"github.com/golang-gui/goui/gui"
+	"github.com/forbe/goui-legacy/gui"
 )
 
 // Tint colors src's alpha mask with a premultiplied foreground. It returns

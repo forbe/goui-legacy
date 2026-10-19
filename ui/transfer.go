@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"slices"
 
-	"github.com/golang-gui/goui/gui"
+	"github.com/forbe/goui-legacy/gui"
 )
 
 // Coordinator is a borrowed, GUI-thread handle for explicit node transfers.

@@ -1,6 +1,6 @@
 package gui
 
-import "github.com/golang-gui/goui/layout"
+import "github.com/forbe/goui-legacy/layout"
 
 // WrapBox is an ordered, non-virtualized wrapping container.
 // Children keep their measured sizes; their MainWeight is ignored.

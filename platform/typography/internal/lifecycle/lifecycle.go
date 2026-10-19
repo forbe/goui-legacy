@@ -1,7 +1,7 @@
 package lifecycle
 
 import (
-	"github.com/golang-gui/goui/core/signal"
+	"github.com/forbe/goui-legacy/core/signal"
 )
 
 // Layout centralizes the notification and idempotent-destroy state shared by

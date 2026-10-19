@@ -1,10 +1,10 @@
 package gui
 
 import (
-	"github.com/golang-gui/goui/core/colors"
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/gui/textedit"
-	"github.com/golang-gui/goui/platform/typography"
+	"github.com/forbe/goui-legacy/core/colors"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/gui/textedit"
+	"github.com/forbe/goui-legacy/platform/typography"
 )
 
 // One optional layout per view, separate from document paragraphs and geometry.

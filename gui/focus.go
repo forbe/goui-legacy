@@ -3,7 +3,7 @@ package gui
 import (
 	"slices"
 
-	"github.com/golang-gui/goui/platform/events"
+	"github.com/forbe/goui-legacy/platform/events"
 )
 
 // setFocusVisible changes the host's input mode, not its logical focus. The

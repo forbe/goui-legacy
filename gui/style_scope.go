@@ -1,8 +1,8 @@
 package gui
 
 import (
-	"github.com/golang-gui/goui/layout"
-	"github.com/golang-gui/goui/style"
+	"github.com/forbe/goui-legacy/layout"
+	"github.com/forbe/goui-legacy/style"
 )
 
 // StyleScope explicitly selects a complete stylesheet for its subtree. It does

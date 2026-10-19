@@ -4,8 +4,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/golang-gui/goui/platform/darwin/frameworks/appkit"
-	"github.com/golang-gui/goui/platform/darwin/frameworks/foundation"
+	"github.com/forbe/goui-legacy/platform/darwin/frameworks/appkit"
+	"github.com/forbe/goui-legacy/platform/darwin/frameworks/foundation"
 	"golang.org/x/text/language"
 )
 

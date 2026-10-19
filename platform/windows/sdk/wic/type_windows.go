@@ -1,6 +1,6 @@
 package wic
 
-import "github.com/golang-gui/goui/platform/windows/sdk/com"
+import "github.com/forbe/goui-legacy/platform/windows/sdk/com"
 
 type Rect struct {
 	X      int32

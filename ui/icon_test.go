@@ -4,7 +4,7 @@ import (
 	"image"
 	"testing"
 
-	"github.com/golang-gui/goui/gui"
+	"github.com/forbe/goui-legacy/gui"
 )
 
 func TestIconReconcile(t *testing.T) {

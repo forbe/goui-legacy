@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/golang-gui/goui/platform/events"
+	"github.com/forbe/goui-legacy/platform/events"
 )
 
 type clipboardResultStub struct {

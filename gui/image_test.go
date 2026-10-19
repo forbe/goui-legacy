@@ -5,9 +5,9 @@ import (
 	"image"
 	"testing"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/layout"
-	"github.com/golang-gui/goui/platform/graphics"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/layout"
+	"github.com/forbe/goui-legacy/platform/graphics"
 )
 
 func TestImageSnapshot(t *testing.T) {

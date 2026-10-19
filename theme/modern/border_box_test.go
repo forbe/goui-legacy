@@ -1,7 +1,7 @@
 package modern
 
 import (
-	"github.com/golang-gui/goui/style"
+	"github.com/forbe/goui-legacy/style"
 	"testing"
 )
 

@@ -5,8 +5,8 @@ import (
 	"unsafe"
 
 	"github.com/goexlib/cgo"
-	"github.com/golang-gui/goui/platform/linux/libs/fontconfig"
-	"github.com/golang-gui/goui/platform/linux/libs/glib"
+	"github.com/forbe/goui-legacy/platform/linux/libs/fontconfig"
+	"github.com/forbe/goui-legacy/platform/linux/libs/glib"
 )
 
 var (

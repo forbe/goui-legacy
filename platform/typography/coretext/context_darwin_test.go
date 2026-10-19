@@ -11,11 +11,11 @@ import (
 	"testing"
 	"unsafe"
 
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/core_foundation"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/core_graphics"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/core_text"
-	"github.com/golang-gui/goui/platform/typography"
-	"github.com/golang-gui/goui/platform/typography/internal/typographytest"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/core_foundation"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/core_graphics"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/core_text"
+	"github.com/forbe/goui-legacy/platform/typography"
+	"github.com/forbe/goui-legacy/platform/typography/internal/typographytest"
 )
 
 func TestMain(m *testing.M) { os.Exit(typographytest.Main(m)) }

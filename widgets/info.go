@@ -1,6 +1,6 @@
 package widgets
 
-import "github.com/golang-gui/goui/gui"
+import "github.com/forbe/goui-legacy/gui"
 
 // Semantic roles supplied by this widget package. Values remain stable across
 // implementation changes; generic GUI snapshot consumers need no tab knowledge.

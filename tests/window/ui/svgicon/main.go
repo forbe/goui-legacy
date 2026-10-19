@@ -44,13 +44,13 @@ import (
 	"image/color"
 	"strings"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/icon"
-	drawicon "github.com/golang-gui/goui/icon/draw"
-	"github.com/golang-gui/goui/icon/svg"
-	"github.com/golang-gui/goui/platform/graphics"
-	"github.com/golang-gui/goui/theme/modern"
-	"github.com/golang-gui/goui/ui"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/icon"
+	drawicon "github.com/forbe/goui-legacy/icon/draw"
+	"github.com/forbe/goui-legacy/icon/svg"
+	"github.com/forbe/goui-legacy/platform/graphics"
+	"github.com/forbe/goui-legacy/theme/modern"
+	"github.com/forbe/goui-legacy/ui"
 )
 
 const (

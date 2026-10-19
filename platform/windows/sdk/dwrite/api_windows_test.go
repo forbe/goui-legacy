@@ -4,7 +4,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/golang-gui/goui/platform/windows/sdk/com"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/com"
 )
 
 // 不需要桌面。两个 BOOL* 都是输出，原生 BOOL 为 32 位；检查真实 DirectWrite

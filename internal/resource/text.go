@@ -2,7 +2,7 @@
 // content, stable semantic identifiers, diagnostics or native system dialogs.
 package resource
 
-import "github.com/golang-gui/goui/mlang"
+import "github.com/forbe/goui-legacy/mlang"
 
 var (
 	Undo = mlang.String(mlang.En("Undo"),

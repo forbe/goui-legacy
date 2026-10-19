@@ -3,7 +3,7 @@ package state
 import (
 	"sync"
 
-	"github.com/golang-gui/goui/core/signal"
+	"github.com/forbe/goui-legacy/core/signal"
 )
 
 // State stores a value and emits a synchronous notification after every Set.

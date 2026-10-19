@@ -10,16 +10,16 @@ import (
 	"unsafe"
 
 	"github.com/goexlib/cgo"
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/platform/typography"
-	"github.com/golang-gui/goui/platform/typography/internal/lifecycle"
-	"github.com/golang-gui/goui/platform/typography/utils"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/platform/typography"
+	"github.com/forbe/goui-legacy/platform/typography/internal/lifecycle"
+	"github.com/forbe/goui-legacy/platform/typography/utils"
 
-	"github.com/golang-gui/goui/platform/windows/sdk/com"
-	"github.com/golang-gui/goui/platform/windows/sdk/d2d1"
-	"github.com/golang-gui/goui/platform/windows/sdk/dwrite"
-	"github.com/golang-gui/goui/platform/windows/sdk/dxgi"
-	"github.com/golang-gui/goui/platform/windows/sdk/wic"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/com"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/d2d1"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/dwrite"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/dxgi"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/wic"
 )
 
 type Context struct {

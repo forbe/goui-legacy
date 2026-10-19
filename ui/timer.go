@@ -3,7 +3,7 @@ package ui
 import (
 	"time"
 
-	"github.com/golang-gui/goui/gui"
+	"github.com/forbe/goui-legacy/gui"
 )
 
 // Timer is a reusable runtime timer created by App.TimeoutFunc or App.TickFunc.

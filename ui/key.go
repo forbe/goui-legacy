@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/golang-gui/goui/gui"
+import "github.com/forbe/goui-legacy/gui"
 
 // UI reuses GUI declaration types, never platform event types.
 type Key = gui.Key

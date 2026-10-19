@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"unicode/utf8"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/core/signal"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/core/signal"
 )
 
 // IMClient is implemented by widgets that accept text input. On every focus

@@ -8,10 +8,10 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/golang-gui/goui/platform/linux/libs/fontconfig"
-	native "github.com/golang-gui/goui/platform/linux/libs/pango"
-	"github.com/golang-gui/goui/platform/typography"
-	"github.com/golang-gui/goui/platform/typography/internal/typographytest"
+	"github.com/forbe/goui-legacy/platform/linux/libs/fontconfig"
+	native "github.com/forbe/goui-legacy/platform/linux/libs/pango"
+	"github.com/forbe/goui-legacy/platform/typography"
+	"github.com/forbe/goui-legacy/platform/typography/internal/typographytest"
 )
 
 func TestMain(m *testing.M) { os.Exit(typographytest.Main(m)) }

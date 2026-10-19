@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang-gui/goui/platform/typography"
+	"github.com/forbe/goui-legacy/platform/typography"
 )
 
 // FontStyles checks base/range agreement, complete replacement and isolation.

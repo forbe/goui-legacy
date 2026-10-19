@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang-gui/goui/mlang"
+	"github.com/forbe/goui-legacy/mlang"
 )
 
 // Validate every named resource against its declared language, including format

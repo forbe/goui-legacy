@@ -4,9 +4,9 @@ import (
 	"math"
 	"slices"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/layout"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/layout"
 )
 
 // Overlay lays out one main child and any number of floating children. Only

@@ -1,6 +1,6 @@
 package layout
 
-import "github.com/golang-gui/goui/core/geometry"
+import "github.com/forbe/goui-legacy/core/geometry"
 
 type FillLayout struct{}
 

@@ -24,10 +24,10 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/golang-gui/goui/layout"
-	"github.com/golang-gui/goui/style"
-	"github.com/golang-gui/goui/theme/modern"
-	"github.com/golang-gui/goui/ui"
+	"github.com/forbe/goui-legacy/layout"
+	"github.com/forbe/goui-legacy/style"
+	"github.com/forbe/goui-legacy/theme/modern"
+	"github.com/forbe/goui-legacy/ui"
 )
 
 func main() {

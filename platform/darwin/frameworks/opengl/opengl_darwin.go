@@ -1,9 +1,9 @@
 package opengl
 
 import (
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/appkit"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/foundation"
-	"github.com/golang-gui/goui/platform/darwin/frameworks/utils"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/appkit"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/foundation"
+	"github.com/forbe/goui-legacy/platform/darwin/frameworks/utils"
 
 	"github.com/ebitengine/purego/objc"
 )

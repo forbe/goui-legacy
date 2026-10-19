@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/layout"
-	"github.com/golang-gui/goui/ui"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/layout"
+	"github.com/forbe/goui-legacy/ui"
 )
 
 // ScrollBar 没有公共 UI 声明，此处示范如何用标准 WidgetView 作本地薄绑定。

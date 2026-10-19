@@ -4,7 +4,7 @@ package pixelsnap
 
 import (
 	"github.com/goexlib/mathx"
-	"github.com/golang-gui/goui/core/geometry"
+	"github.com/forbe/goui-legacy/core/geometry"
 )
 
 func canSnap(t geometry.Transform, scale float32) bool {

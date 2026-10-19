@@ -1,6 +1,6 @@
 package events
 
-import "github.com/golang-gui/goui/platform/common"
+import "github.com/forbe/goui-legacy/platform/common"
 
 // StateEvent reports presentation observed in response to native events.
 // Requests never synthesize completion. Unknown means observation is unavailable.

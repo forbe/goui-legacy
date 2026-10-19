@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/style"
-	"github.com/golang-gui/goui/ui"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/style"
+	"github.com/forbe/goui-legacy/ui"
 )
 
 func resolved(sheet style.StyleSheet, name string, state style.State) style.Style {

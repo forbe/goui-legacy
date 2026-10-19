@@ -1,8 +1,8 @@
 package widgets
 
 import (
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/layout"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/layout"
 )
 
 // splitBounds never returns an inverted range. Under impossible minima the

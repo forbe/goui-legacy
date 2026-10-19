@@ -3,7 +3,7 @@ package style
 import (
 	"image/color"
 
-	"github.com/golang-gui/goui/core/geometry"
+	"github.com/forbe/goui-legacy/core/geometry"
 )
 
 // Shadow describes an outer box shadow. Offset, BlurRadius and SpreadRadius

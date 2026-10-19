@@ -37,12 +37,12 @@ import (
 	"log"
 	"time"
 
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/layout"
-	"github.com/golang-gui/goui/theme/modern"
-	"github.com/golang-gui/goui/ui"
-	"github.com/golang-gui/goui/widgets"
-	wui "github.com/golang-gui/goui/widgets/ui"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/layout"
+	"github.com/forbe/goui-legacy/theme/modern"
+	"github.com/forbe/goui-legacy/ui"
+	"github.com/forbe/goui-legacy/widgets"
+	wui "github.com/forbe/goui-legacy/widgets/ui"
 )
 
 type squareIcon struct{}

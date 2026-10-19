@@ -6,7 +6,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/golang-gui/goui/platform"
+	"github.com/forbe/goui-legacy/platform"
 )
 
 var mainThreadTasks = make(chan func())

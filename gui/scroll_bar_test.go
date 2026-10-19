@@ -4,10 +4,10 @@ import (
 	"math"
 	"testing"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/layout"
-	"github.com/golang-gui/goui/platform/events"
-	"github.com/golang-gui/goui/style"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/layout"
+	"github.com/forbe/goui-legacy/platform/events"
+	"github.com/forbe/goui-legacy/style"
 )
 
 func approxEq(a, b float32) bool {

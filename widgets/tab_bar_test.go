@@ -8,15 +8,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/layout"
-	"github.com/golang-gui/goui/mlang"
-	"github.com/golang-gui/goui/platform/events"
-	"github.com/golang-gui/goui/platform/graphics"
-	"github.com/golang-gui/goui/platform/typography"
-	"github.com/golang-gui/goui/style"
-	widgetstyle "github.com/golang-gui/goui/widgets/style"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/layout"
+	"github.com/forbe/goui-legacy/mlang"
+	"github.com/forbe/goui-legacy/platform/events"
+	"github.com/forbe/goui-legacy/platform/graphics"
+	"github.com/forbe/goui-legacy/platform/typography"
+	"github.com/forbe/goui-legacy/style"
+	widgetstyle "github.com/forbe/goui-legacy/widgets/style"
 )
 
 // 布局、溢出与页面顺序同步。

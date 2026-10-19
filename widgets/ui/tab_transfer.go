@@ -3,9 +3,9 @@ package ui
 import (
 	"fmt"
 
-	"github.com/golang-gui/goui/core/signal"
-	baseui "github.com/golang-gui/goui/ui"
-	"github.com/golang-gui/goui/widgets"
+	"github.com/forbe/goui-legacy/core/signal"
+	baseui "github.com/forbe/goui-legacy/ui"
+	"github.com/forbe/goui-legacy/widgets"
 )
 
 // TabTransfer reports a committed node move. PageID retains the page's identity;

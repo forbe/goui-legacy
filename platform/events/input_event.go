@@ -1,6 +1,6 @@
 package events
 
-import "github.com/golang-gui/goui/core/geometry"
+import "github.com/forbe/goui-legacy/core/geometry"
 
 // Modifiers reports aggregate native modifier state, without left/right sides.
 // A modifier remains active while either side is held. KeyEvent.Location

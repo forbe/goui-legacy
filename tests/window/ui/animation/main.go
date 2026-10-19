@@ -19,13 +19,13 @@ import (
 	"log"
 	"time"
 
-	"github.com/golang-gui/goui/animation"
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/icon/draw"
-	"github.com/golang-gui/goui/platform/graphics"
-	"github.com/golang-gui/goui/theme/modern"
-	"github.com/golang-gui/goui/ui"
-	wui "github.com/golang-gui/goui/widgets/ui"
+	"github.com/forbe/goui-legacy/animation"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/icon/draw"
+	"github.com/forbe/goui-legacy/platform/graphics"
+	"github.com/forbe/goui-legacy/theme/modern"
+	"github.com/forbe/goui-legacy/ui"
+	wui "github.com/forbe/goui-legacy/widgets/ui"
 )
 
 func main() {

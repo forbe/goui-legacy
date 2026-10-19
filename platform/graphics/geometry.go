@@ -1,6 +1,6 @@
 package graphics
 
-import "github.com/golang-gui/goui/core/geometry"
+import "github.com/forbe/goui-legacy/core/geometry"
 
 type (
 	Point     = geometry.Point

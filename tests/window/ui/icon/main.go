@@ -26,12 +26,12 @@ import (
 	"fmt"
 	"image/color"
 
-	"github.com/golang-gui/goui/core/geometry"
-	drawicon "github.com/golang-gui/goui/icon/draw"
-	"github.com/golang-gui/goui/layout"
-	"github.com/golang-gui/goui/platform/graphics"
-	"github.com/golang-gui/goui/theme/modern"
-	"github.com/golang-gui/goui/ui"
+	"github.com/forbe/goui-legacy/core/geometry"
+	drawicon "github.com/forbe/goui-legacy/icon/draw"
+	"github.com/forbe/goui-legacy/layout"
+	"github.com/forbe/goui-legacy/platform/graphics"
+	"github.com/forbe/goui-legacy/theme/modern"
+	"github.com/forbe/goui-legacy/ui"
 )
 
 func search(p graphics.Painter, size graphics.Size, c graphics.Color) {

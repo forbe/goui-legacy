@@ -5,8 +5,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/platform/typography"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/platform/typography"
 )
 
 type cacheTestLayout struct {

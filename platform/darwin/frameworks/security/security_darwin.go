@@ -1,8 +1,8 @@
 package security
 
 import (
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/core_foundation"
-	"github.com/golang-gui/goui/platform/darwin/frameworks/utils"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/core_foundation"
+	"github.com/forbe/goui-legacy/platform/darwin/frameworks/utils"
 )
 
 type SecTaskRef = CFTypeRef

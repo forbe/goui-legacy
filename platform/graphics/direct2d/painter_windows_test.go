@@ -10,12 +10,12 @@ import (
 	"unsafe"
 
 	"github.com/goexlib/cgo"
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/platform/graphics"
-	"github.com/golang-gui/goui/platform/windows/sdk/com"
-	"github.com/golang-gui/goui/platform/windows/sdk/d2d1"
-	"github.com/golang-gui/goui/platform/windows/sdk/d3d11"
-	"github.com/golang-gui/goui/platform/windows/sdk/dxgi"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/platform/graphics"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/com"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/d2d1"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/d3d11"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/dxgi"
 )
 
 func TestSwapChainPresentationPolicy(t *testing.T) {

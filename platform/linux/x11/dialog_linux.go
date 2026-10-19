@@ -7,8 +7,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/golang-gui/goui/platform/common"
-	"github.com/golang-gui/goui/platform/internal/fileaccess"
+	"github.com/forbe/goui-legacy/platform/common"
+	"github.com/forbe/goui-legacy/platform/internal/fileaccess"
 )
 
 // fileDialog implements the native file dialog capability for X11.

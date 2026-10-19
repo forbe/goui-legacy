@@ -3,8 +3,8 @@ package events
 import (
 	"testing"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/platform/dragdrop"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/platform/dragdrop"
 )
 
 func TestDragOfferEventResponseDoesNotChangeFacts(t *testing.T) {

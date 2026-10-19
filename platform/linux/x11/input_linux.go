@@ -1,9 +1,9 @@
 package x11
 
 import (
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/platform/events"
-	"github.com/golang-gui/goui/platform/linux/libs/xlib"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/platform/events"
+	"github.com/forbe/goui-legacy/platform/linux/libs/xlib"
 )
 
 // There is one current native input dispatch on the platform thread. Do not

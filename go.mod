@@ -1,4 +1,4 @@
-module github.com/golang-gui/goui
+module github.com/forbe/goui-legacy
 
 go 1.24
 

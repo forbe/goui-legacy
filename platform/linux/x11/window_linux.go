@@ -9,17 +9,17 @@ import (
 	"slices"
 	"unsafe"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/platform/common"
-	"github.com/golang-gui/goui/platform/events"
-	"github.com/golang-gui/goui/platform/graphics"
-	"github.com/golang-gui/goui/platform/graphics/opengl"
-	"github.com/golang-gui/goui/platform/internal/workarea"
-	"github.com/golang-gui/goui/platform/linux/libs/xrandr"
-	"github.com/golang-gui/goui/platform/linux/libs/xrender"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/platform/common"
+	"github.com/forbe/goui-legacy/platform/events"
+	"github.com/forbe/goui-legacy/platform/graphics"
+	"github.com/forbe/goui-legacy/platform/graphics/opengl"
+	"github.com/forbe/goui-legacy/platform/internal/workarea"
+	"github.com/forbe/goui-legacy/platform/linux/libs/xrandr"
+	"github.com/forbe/goui-legacy/platform/linux/libs/xrender"
 
-	"github.com/golang-gui/goui/platform/linux/libs/glx"
-	"github.com/golang-gui/goui/platform/linux/libs/xlib"
+	"github.com/forbe/goui-legacy/platform/linux/libs/glx"
+	"github.com/forbe/goui-legacy/platform/linux/libs/xlib"
 
 	"github.com/goexlib/cgo"
 )

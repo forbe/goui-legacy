@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/golang-gui/goui/gui/textedit"
+	"github.com/forbe/goui-legacy/gui/textedit"
 )
 
 func TestEditSourcesAndSelectionHistory(t *testing.T) {

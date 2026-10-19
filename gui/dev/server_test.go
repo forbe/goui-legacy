@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/platform/events"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/platform/events"
 )
 
 func TestExplicitModifierAndKeyNames(t *testing.T) {

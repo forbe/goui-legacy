@@ -4,7 +4,7 @@ import (
 	"image"
 	"reflect"
 
-	"github.com/golang-gui/goui/gui"
+	"github.com/forbe/goui-legacy/gui"
 )
 
 type ImageView struct {

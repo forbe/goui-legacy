@@ -9,15 +9,15 @@ import (
 	"slices"
 	"unicode/utf8"
 
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/platform/typography"
-	"github.com/golang-gui/goui/platform/typography/internal/lifecycle"
-	"github.com/golang-gui/goui/platform/typography/utils"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/platform/typography"
+	"github.com/forbe/goui-legacy/platform/typography/internal/lifecycle"
+	"github.com/forbe/goui-legacy/platform/typography/utils"
 
-	"github.com/golang-gui/goui/platform/linux/libs/cairo"
-	"github.com/golang-gui/goui/platform/linux/libs/fontconfig"
-	"github.com/golang-gui/goui/platform/linux/libs/pango"
-	"github.com/golang-gui/goui/platform/linux/libs/pango_cairo"
+	"github.com/forbe/goui-legacy/platform/linux/libs/cairo"
+	"github.com/forbe/goui-legacy/platform/linux/libs/fontconfig"
+	"github.com/forbe/goui-legacy/platform/linux/libs/pango"
+	"github.com/forbe/goui-legacy/platform/linux/libs/pango_cairo"
 
 	"github.com/goexlib/cgo"
 )

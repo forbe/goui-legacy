@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/golang-gui/goui/core/geometry"
+	"github.com/forbe/goui-legacy/core/geometry"
 )
 
 func TestNormalizeAppliesOffsetSpreadAndRadius(t *testing.T) {

@@ -4,8 +4,8 @@ import (
 	"slices"
 	"time"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/platform/events"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/platform/events"
 )
 
 // GestureController opts an EventController into pointer-sequence arbitration.

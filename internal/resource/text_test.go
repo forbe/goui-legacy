@@ -4,7 +4,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/golang-gui/goui/mlang"
+	"github.com/forbe/goui-legacy/mlang"
 )
 
 func TestFrameworkTranslations(t *testing.T) {

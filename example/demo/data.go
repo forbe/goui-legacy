@@ -5,12 +5,12 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/golang-gui/goui/example/demo/resource"
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/layout"
-	"github.com/golang-gui/goui/ui"
-	"github.com/golang-gui/goui/widgets"
-	wui "github.com/golang-gui/goui/widgets/ui"
+	"github.com/forbe/goui-legacy/example/demo/resource"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/layout"
+	"github.com/forbe/goui-legacy/ui"
+	"github.com/forbe/goui-legacy/widgets"
+	wui "github.com/forbe/goui-legacy/widgets/ui"
 )
 
 type record struct {

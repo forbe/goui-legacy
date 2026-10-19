@@ -1,10 +1,10 @@
 package widgets
 
 import (
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/platform/graphics"
-	"github.com/golang-gui/goui/style"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/platform/graphics"
+	"github.com/forbe/goui-legacy/style"
 )
 
 // Shared box painting for compound widgets; style resolution stays local to

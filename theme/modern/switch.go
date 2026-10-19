@@ -3,7 +3,7 @@ package modern
 import (
 	"image/color"
 
-	"github.com/golang-gui/goui/style"
+	"github.com/forbe/goui-legacy/style"
 )
 
 func switchRules(p palette, accent, focus color.RGBA) []style.Rule {

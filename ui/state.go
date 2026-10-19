@@ -1,8 +1,8 @@
 package ui
 
 import (
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/core/state"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/core/state"
 )
 
 type State[T any] struct {

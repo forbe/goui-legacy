@@ -1,8 +1,8 @@
 package ui
 
 import (
-	"github.com/golang-gui/goui/core/optional"
-	"github.com/golang-gui/goui/gui"
+	"github.com/forbe/goui-legacy/core/optional"
+	"github.com/forbe/goui-legacy/gui"
 )
 
 // Icon content shares GUI's drawing and immutable-resource contracts.

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang-gui/goui/gui"
-	basestyle "github.com/golang-gui/goui/style"
+	"github.com/forbe/goui-legacy/gui"
+	basestyle "github.com/forbe/goui-legacy/style"
 )
 
 func TestSwitchFallback(t *testing.T) {

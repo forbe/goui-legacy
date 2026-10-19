@@ -1,6 +1,6 @@
 package layout
 
-import "github.com/golang-gui/goui/core/geometry"
+import "github.com/forbe/goui-legacy/core/geometry"
 
 // WrapLayout packs children in order, starting another line when the main
 // axis is full. A vertical layout wraps into columns. MainWeight is ignored.

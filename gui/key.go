@@ -3,7 +3,7 @@ package gui
 import (
 	"runtime"
 
-	"github.com/golang-gui/goui/platform/events"
+	"github.com/forbe/goui-legacy/platform/events"
 )
 
 // KeyModifiers describes GUI shortcut modifiers, not raw platform input.

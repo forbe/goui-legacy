@@ -1,6 +1,6 @@
 package widgets
 
-import "github.com/golang-gui/goui/core/signal"
+import "github.com/forbe/goui-legacy/core/signal"
 
 // TableColumn is mutable configuration owned by at most one TableView. Widths
 // are DIP, including reserved grid lines. Cell content fills the remaining

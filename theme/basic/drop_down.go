@@ -3,8 +3,8 @@ package basic
 import (
 	"image/color"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/style"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/style"
 )
 
 func dropDownRules() []style.Rule {

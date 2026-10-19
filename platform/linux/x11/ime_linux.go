@@ -6,11 +6,11 @@ import (
 	"unsafe"
 
 	"github.com/goexlib/cgo"
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/platform/common"
-	"github.com/golang-gui/goui/platform/events"
-	"github.com/golang-gui/goui/platform/linux/libs/libc"
-	"github.com/golang-gui/goui/platform/linux/libs/xlib"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/platform/common"
+	"github.com/forbe/goui-legacy/platform/events"
+	"github.com/forbe/goui-legacy/platform/linux/libs/libc"
+	"github.com/forbe/goui-legacy/platform/linux/libs/xlib"
 )
 
 var errNoInputMethod = errors.New("x11: no input method available")

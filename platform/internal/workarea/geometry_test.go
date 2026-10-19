@@ -1,7 +1,7 @@
 package workarea
 
 import (
-	"github.com/golang-gui/goui/core/geometry"
+	"github.com/forbe/goui-legacy/core/geometry"
 	"math"
 	"testing"
 )

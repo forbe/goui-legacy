@@ -3,7 +3,7 @@ package ui
 import (
 	"errors"
 
-	"github.com/golang-gui/goui/gui"
+	"github.com/forbe/goui-legacy/gui"
 )
 
 // ErrClipboardTimeout means the system clipboard owner did not answer in time.

@@ -3,8 +3,8 @@ package textbitmap
 import (
 	"math"
 
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/platform/typography"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/platform/typography"
 )
 
 // ImageCache keeps a bounded set of painter-native images for each layout.

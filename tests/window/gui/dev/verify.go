@@ -9,8 +9,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/gui/dev"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/gui/dev"
 )
 
 // This verifier only consumes detached protocol data. It never reads GUI

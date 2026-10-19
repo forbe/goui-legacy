@@ -8,10 +8,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/golang-gui/goui/platform"
-	"github.com/golang-gui/goui/platform/graphics"
-	"github.com/golang-gui/goui/platform/graphics/software"
-	"github.com/golang-gui/goui/platform/typography"
+	"github.com/forbe/goui-legacy/platform"
+	"github.com/forbe/goui-legacy/platform/graphics"
+	"github.com/forbe/goui-legacy/platform/graphics/software"
+	"github.com/forbe/goui-legacy/platform/typography"
 )
 
 func TestTypography(t *testing.T) {

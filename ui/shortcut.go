@@ -3,8 +3,8 @@ package ui
 import (
 	"slices"
 
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/gui"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/gui"
 )
 
 // ShortcutView describes a binding, not a widget. Rebuild the descriptor to

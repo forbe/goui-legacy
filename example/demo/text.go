@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 
-	"github.com/golang-gui/goui/example/demo/resource"
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/ui"
-	wui "github.com/golang-gui/goui/widgets/ui"
+	"github.com/forbe/goui-legacy/example/demo/resource"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/ui"
+	wui "github.com/forbe/goui-legacy/widgets/ui"
 )
 
 func (d *demo) textPage() ui.View {

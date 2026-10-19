@@ -7,11 +7,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/mlang"
-	"github.com/golang-gui/goui/style"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/mlang"
+	"github.com/forbe/goui-legacy/style"
 
 	"github.com/xuges/gothread"
 )

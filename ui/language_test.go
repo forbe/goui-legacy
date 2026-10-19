@@ -5,8 +5,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/mlang"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/mlang"
 )
 
 func TestLanguageAutomaticallyReconcilesExistingWidgets(t *testing.T) {

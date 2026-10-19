@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/golang-gui/goui/platform/typography"
+	"github.com/forbe/goui-legacy/platform/typography"
 )
 
 // Tabs exercises native metrics rather than expanding the input to spaces.

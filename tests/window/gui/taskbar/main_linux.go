@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/platform/linux/libs/xlib"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/platform/linux/libs/xlib"
 )
 
 func checkNative(window gui.Window, skip bool) error {

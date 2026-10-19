@@ -3,7 +3,7 @@ package basic
 import (
 	"image/color"
 
-	"github.com/golang-gui/goui/style"
+	"github.com/forbe/goui-legacy/style"
 )
 
 func switchRules() []style.Rule {

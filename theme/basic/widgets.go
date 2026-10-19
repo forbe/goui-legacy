@@ -3,7 +3,7 @@ package basic
 import (
 	"image/color"
 
-	"github.com/golang-gui/goui/style"
+	"github.com/forbe/goui-legacy/style"
 )
 
 // WidgetRules returns the fallback rules for controls in package widgets.

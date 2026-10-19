@@ -6,7 +6,7 @@ import (
 	"image/color"
 	"runtime"
 
-	"github.com/golang-gui/goui/style"
+	"github.com/forbe/goui-legacy/style"
 )
 
 const (

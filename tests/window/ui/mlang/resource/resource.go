@@ -4,8 +4,8 @@ package resource
 import (
 	"strings"
 
-	"github.com/golang-gui/goui/icon/svg"
-	"github.com/golang-gui/goui/mlang"
+	"github.com/forbe/goui-legacy/icon/svg"
+	"github.com/forbe/goui-legacy/mlang"
 )
 
 var (

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang-gui/goui/platform/common"
-	"github.com/golang-gui/goui/platform/linux/libs/xlib"
+	"github.com/forbe/goui-legacy/platform/common"
+	"github.com/forbe/goui-legacy/platform/linux/libs/xlib"
 )
 
 func TestClipboardReadDeadlineAndReentry(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"image/color"
 
 	"github.com/goexlib/cgo"
-	"github.com/golang-gui/goui/platform/typography"
+	"github.com/forbe/goui-legacy/platform/typography"
 )
 
 func CopyBitmap(src typography.TextBitmap, width, height int, buf []byte) (dst typography.TextBitmap) {

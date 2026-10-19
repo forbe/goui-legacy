@@ -2,7 +2,7 @@ package xrender
 
 import (
 	"github.com/goexlib/cgo"
-	"github.com/golang-gui/goui/platform/linux/libs/xlib"
+	"github.com/forbe/goui-legacy/platform/linux/libs/xlib"
 )
 
 var (

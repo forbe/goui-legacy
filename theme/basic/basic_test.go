@@ -5,8 +5,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/golang-gui/goui/core/colors"
-	"github.com/golang-gui/goui/style"
+	"github.com/forbe/goui-legacy/core/colors"
+	"github.com/forbe/goui-legacy/style"
 )
 
 func TestCompleteFallbackTextAndStates(t *testing.T) {

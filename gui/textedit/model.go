@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/golang-gui/goui/core/signal"
+	"github.com/forbe/goui-legacy/core/signal"
 )
 
 // Range is a half-open [Start, End) range of UTF-8 byte offsets within a

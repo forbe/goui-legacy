@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/golang-gui/goui/example/demo/resource"
-	"github.com/golang-gui/goui/mlang"
-	"github.com/golang-gui/goui/ui"
+	"github.com/forbe/goui-legacy/example/demo/resource"
+	"github.com/forbe/goui-legacy/mlang"
+	"github.com/forbe/goui-legacy/ui"
 )
 
 // Set is called by BindText or an explicit application operation: either hands

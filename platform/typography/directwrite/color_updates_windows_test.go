@@ -4,7 +4,7 @@ import (
 	"image/color"
 	"testing"
 
-	"github.com/golang-gui/goui/platform/typography/utils"
+	"github.com/forbe/goui-legacy/platform/typography/utils"
 )
 
 func TestFullColorReplacementDropsObsoleteRanges(t *testing.T) {

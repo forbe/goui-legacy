@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/golang-gui/goui/core/signal"
+	"github.com/forbe/goui-legacy/core/signal"
 )
 
 // Timer emits timeout notifications on its application's GUI thread. Create it

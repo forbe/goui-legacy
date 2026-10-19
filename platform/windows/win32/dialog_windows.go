@@ -5,9 +5,9 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/golang-gui/goui/platform/common"
-	"github.com/golang-gui/goui/platform/internal/fileaccess"
-	"github.com/golang-gui/goui/platform/windows/sdk/shell"
+	"github.com/forbe/goui-legacy/platform/common"
+	"github.com/forbe/goui-legacy/platform/internal/fileaccess"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/shell"
 )
 
 // fileDialog implements the native file dialog capability for Windows

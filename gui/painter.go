@@ -5,9 +5,9 @@ import (
 	"image"
 	"math"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/platform/graphics"
-	"github.com/golang-gui/goui/platform/typography"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/platform/graphics"
+	"github.com/forbe/goui-legacy/platform/typography"
 )
 
 // Painter is the widget-local drawing context supplied to Widget.Paint.

@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/platform/common"
-	"github.com/golang-gui/goui/platform/windows/sdk/winapi"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/platform/common"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/winapi"
 )
 
 func checkNative(window gui.Window, skip bool) error {

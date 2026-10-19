@@ -5,8 +5,8 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/gui"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/gui"
 )
 
 type root struct {

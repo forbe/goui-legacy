@@ -3,7 +3,7 @@ package typography
 import (
 	"image/color"
 
-	"github.com/golang-gui/goui/core/signal"
+	"github.com/forbe/goui-legacy/core/signal"
 )
 
 // TextLayout represents immutable UTF-8 text shaped and arranged within a

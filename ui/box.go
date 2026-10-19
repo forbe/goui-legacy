@@ -1,8 +1,8 @@
 package ui
 
 import (
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/layout"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/layout"
 )
 
 type BoxView struct {

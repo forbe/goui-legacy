@@ -5,20 +5,20 @@ import (
 	"image"
 	"unsafe"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/platform/graphics"
-	"github.com/golang-gui/goui/platform/graphics/internal/boxshadow"
-	"github.com/golang-gui/goui/platform/graphics/internal/offscreen"
-	"github.com/golang-gui/goui/platform/graphics/internal/pixelsnap"
-	"github.com/golang-gui/goui/platform/typography"
-	"github.com/golang-gui/goui/platform/typography/directwrite"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/platform/graphics"
+	"github.com/forbe/goui-legacy/platform/graphics/internal/boxshadow"
+	"github.com/forbe/goui-legacy/platform/graphics/internal/offscreen"
+	"github.com/forbe/goui-legacy/platform/graphics/internal/pixelsnap"
+	"github.com/forbe/goui-legacy/platform/typography"
+	"github.com/forbe/goui-legacy/platform/typography/directwrite"
 
-	"github.com/golang-gui/goui/platform/windows/sdk/com"
-	"github.com/golang-gui/goui/platform/windows/sdk/d2d1"
-	"github.com/golang-gui/goui/platform/windows/sdk/d3d11"
-	"github.com/golang-gui/goui/platform/windows/sdk/dcomp"
-	"github.com/golang-gui/goui/platform/windows/sdk/dxgi"
-	"github.com/golang-gui/goui/platform/windows/sdk/winapi"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/com"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/d2d1"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/d3d11"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/dcomp"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/dxgi"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/winapi"
 )
 
 type Painter struct {

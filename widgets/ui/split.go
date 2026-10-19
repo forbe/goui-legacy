@@ -1,11 +1,11 @@
 package ui
 
 import (
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/layout"
-	baseui "github.com/golang-gui/goui/ui"
-	"github.com/golang-gui/goui/widgets"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/layout"
+	baseui "github.com/forbe/goui-legacy/ui"
+	"github.com/forbe/goui-legacy/widgets"
 )
 
 // SplitViewView coordinates two ordinary Bin targets. Without a sizing

@@ -4,8 +4,8 @@
 package style
 
 import (
-	basestyle "github.com/golang-gui/goui/style"
-	"github.com/golang-gui/goui/theme/basic"
+	basestyle "github.com/forbe/goui-legacy/style"
+	"github.com/forbe/goui-legacy/theme/basic"
 )
 
 // Rules returns fresh rules for controls in package widgets.

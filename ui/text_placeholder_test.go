@@ -3,7 +3,7 @@ package ui
 import (
 	"testing"
 
-	"github.com/golang-gui/goui/gui"
+	"github.com/forbe/goui-legacy/gui"
 )
 
 func TestTextPlaceholderUpdateAndOmissionPreserveEditing(t *testing.T) {

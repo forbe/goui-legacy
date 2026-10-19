@@ -4,9 +4,9 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/golang-gui/goui/platform/linux/libs/glx"
-	"github.com/golang-gui/goui/platform/linux/libs/xlib"
-	"github.com/golang-gui/goui/platform/linux/libs/xrender"
+	"github.com/forbe/goui-legacy/platform/linux/libs/glx"
+	"github.com/forbe/goui-legacy/platform/linux/libs/xlib"
+	"github.com/forbe/goui-legacy/platform/linux/libs/xrender"
 )
 
 func InitGLX(display xlib.Display) error {

@@ -39,11 +39,11 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/gui"
-	_ "github.com/golang-gui/goui/gui/dev"
-	"github.com/golang-gui/goui/layout"
-	"github.com/golang-gui/goui/theme/modern"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/gui"
+	_ "github.com/forbe/goui-legacy/gui/dev"
+	"github.com/forbe/goui-legacy/layout"
+	"github.com/forbe/goui-legacy/theme/modern"
 )
 
 type backendProbe struct {

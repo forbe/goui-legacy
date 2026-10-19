@@ -12,7 +12,7 @@ package mlang
 import (
 	"sync"
 
-	"github.com/golang-gui/goui/core/signal"
+	"github.com/forbe/goui-legacy/core/signal"
 	"golang.org/x/text/language"
 )
 

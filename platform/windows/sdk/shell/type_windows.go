@@ -1,6 +1,6 @@
 package shell
 
-import "github.com/golang-gui/goui/platform/windows/sdk/winapi"
+import "github.com/forbe/goui-legacy/platform/windows/sdk/winapi"
 
 const SEE_MASK_FLAG_NO_UI uint32 = 0x00000400
 

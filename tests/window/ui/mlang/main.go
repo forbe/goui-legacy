@@ -29,12 +29,12 @@ import (
 	"log"
 	"time"
 
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/mlang"
-	"github.com/golang-gui/goui/tests/window/ui/mlang/resource"
-	"github.com/golang-gui/goui/theme/modern"
-	"github.com/golang-gui/goui/ui"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/mlang"
+	"github.com/forbe/goui-legacy/tests/window/ui/mlang/resource"
+	"github.com/forbe/goui-legacy/theme/modern"
+	"github.com/forbe/goui-legacy/ui"
 )
 
 var languages = []struct{ tag, name, greeting string }{

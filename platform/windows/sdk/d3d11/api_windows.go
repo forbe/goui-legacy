@@ -2,7 +2,7 @@ package d3d11
 
 import (
 	"github.com/goexlib/cgo"
-	"github.com/golang-gui/goui/platform/windows/sdk/com"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/com"
 )
 
 var (

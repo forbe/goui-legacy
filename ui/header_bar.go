@@ -3,10 +3,10 @@ package ui
 import (
 	"slices"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/core/optional"
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/gui"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/core/optional"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/gui"
 )
 
 // HeaderBarView binds gui.HeaderBar. GUI owns layout, controls avoidance and

@@ -6,12 +6,12 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/golang-gui/goui/platform/common"
-	"github.com/golang-gui/goui/platform/graphics"
-	"github.com/golang-gui/goui/platform/linux/libs/glib"
-	"github.com/golang-gui/goui/platform/linux/libs/gtk"
-	"github.com/golang-gui/goui/platform/linux/libs/pango"
-	"github.com/golang-gui/goui/platform/linux/libs/pango_cairo"
+	"github.com/forbe/goui-legacy/platform/common"
+	"github.com/forbe/goui-legacy/platform/graphics"
+	"github.com/forbe/goui-legacy/platform/linux/libs/glib"
+	"github.com/forbe/goui-legacy/platform/linux/libs/gtk"
+	"github.com/forbe/goui-legacy/platform/linux/libs/pango"
+	"github.com/forbe/goui-legacy/platform/linux/libs/pango_cairo"
 	"golang.org/x/text/language"
 )
 

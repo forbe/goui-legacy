@@ -6,14 +6,14 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/golang-gui/goui/core/colors"
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/layout"
-	"github.com/golang-gui/goui/platform"
-	"github.com/golang-gui/goui/platform/graphics"
-	"github.com/golang-gui/goui/platform/graphics/software"
-	"github.com/golang-gui/goui/platform/typography"
-	"github.com/golang-gui/goui/style"
+	"github.com/forbe/goui-legacy/core/colors"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/layout"
+	"github.com/forbe/goui-legacy/platform"
+	"github.com/forbe/goui-legacy/platform/graphics"
+	"github.com/forbe/goui-legacy/platform/graphics/software"
+	"github.com/forbe/goui-legacy/platform/typography"
+	"github.com/forbe/goui-legacy/style"
 )
 
 type styleProbe struct {

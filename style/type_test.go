@@ -4,8 +4,8 @@ import (
 	"image/color"
 	"testing"
 
-	"github.com/golang-gui/goui/core/colors"
-	"github.com/golang-gui/goui/core/geometry"
+	"github.com/forbe/goui-legacy/core/colors"
+	"github.com/forbe/goui-legacy/core/geometry"
 )
 
 func TestShadowResolution(t *testing.T) {

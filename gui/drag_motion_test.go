@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/layout"
-	"github.com/golang-gui/goui/platform/dragdrop"
-	"github.com/golang-gui/goui/platform/events"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/layout"
+	"github.com/forbe/goui-legacy/platform/dragdrop"
+	"github.com/forbe/goui-legacy/platform/events"
 )
 
 func TestDragObserverTracksSubtreeIndependentlyOfAcceptance(t *testing.T) {

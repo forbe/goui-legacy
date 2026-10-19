@@ -1,6 +1,6 @@
 package gtk
 
-import "github.com/golang-gui/goui/platform/linux/libs/glib"
+import "github.com/forbe/goui-legacy/platform/linux/libs/glib"
 
 type Settings struct {
 	glib.Object

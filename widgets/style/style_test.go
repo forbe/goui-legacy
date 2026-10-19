@@ -4,9 +4,9 @@ import (
 	"image/color"
 	"testing"
 
-	"github.com/golang-gui/goui/gui"
-	basestyle "github.com/golang-gui/goui/style"
-	"github.com/golang-gui/goui/theme/basic"
+	"github.com/forbe/goui-legacy/gui"
+	basestyle "github.com/forbe/goui-legacy/style"
+	"github.com/forbe/goui-legacy/theme/basic"
 )
 
 func TestRulesComposeWithoutRegistering(t *testing.T) {

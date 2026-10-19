@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/golang-gui/goui/platform/common"
+	"github.com/forbe/goui-legacy/platform/common"
 )
 
 // X11 has no per-window scale factor. We derive a single display-global scale

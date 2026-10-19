@@ -1,6 +1,6 @@
 package common
 
-import "github.com/golang-gui/goui/platform/dragdrop"
+import "github.com/forbe/goui-legacy/platform/dragdrop"
 
 // DragDrop is a surface-scoped native drag and drop capability. It does not
 // perform widget hit testing or decide whether the application accepts data.

@@ -3,8 +3,8 @@ package gui
 import (
 	"slices"
 
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/platform/events"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/platform/events"
 )
 
 // KeyGesture is a single logical key and an exact modifier combination.

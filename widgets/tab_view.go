@@ -4,9 +4,9 @@ package widgets
 import (
 	"slices"
 
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/layout"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/layout"
 )
 
 // TabPage is a retained page and its tab metadata. Its child keeps its own

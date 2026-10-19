@@ -1,12 +1,12 @@
 package main
 
 import (
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/layout"
-	"github.com/golang-gui/goui/platform/graphics"
-	"github.com/golang-gui/goui/style"
-	"github.com/golang-gui/goui/ui"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/layout"
+	"github.com/forbe/goui-legacy/platform/graphics"
+	"github.com/forbe/goui-legacy/style"
+	"github.com/forbe/goui-legacy/ui"
 )
 
 // 示例自己的 Bin：只画自身背景，不向孩子传样式，不遍历绘制子树。

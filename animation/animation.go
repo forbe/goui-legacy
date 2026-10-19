@@ -7,7 +7,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/golang-gui/goui/core/signal"
+	"github.com/forbe/goui-legacy/core/signal"
 )
 
 // FrameSource emits a shared sampling time before layout and paint. Connecting

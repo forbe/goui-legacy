@@ -7,7 +7,7 @@ import (
 	"image/color"
 	"testing"
 
-	"github.com/golang-gui/goui/gui"
+	"github.com/forbe/goui-legacy/gui"
 )
 
 func TestTintPremultipliedMask(t *testing.T) {

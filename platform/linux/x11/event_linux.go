@@ -4,10 +4,10 @@ import (
 	"errors"
 	"time"
 
-	"github.com/golang-gui/goui/platform/common"
-	"github.com/golang-gui/goui/platform/internal/eventloop"
-	"github.com/golang-gui/goui/platform/linux/libs/libc"
-	"github.com/golang-gui/goui/platform/linux/libs/xlib"
+	"github.com/forbe/goui-legacy/platform/common"
+	"github.com/forbe/goui-legacy/platform/internal/eventloop"
+	"github.com/forbe/goui-legacy/platform/linux/libs/libc"
+	"github.com/forbe/goui-legacy/platform/linux/libs/xlib"
 )
 
 type EventLoop struct {

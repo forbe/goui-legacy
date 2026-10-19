@@ -5,12 +5,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/golang-gui/goui/platform/common"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/appkit"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/core_foundation"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/foundation"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/security"
-	"github.com/golang-gui/goui/platform/internal/fileaccess"
+	"github.com/forbe/goui-legacy/platform/common"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/appkit"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/core_foundation"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/foundation"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/security"
+	"github.com/forbe/goui-legacy/platform/internal/fileaccess"
 )
 
 // The retained original URL carries picker/resolution authority. Rebuilding it

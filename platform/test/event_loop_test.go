@@ -3,7 +3,7 @@ package test
 import (
 	"testing"
 
-	"github.com/golang-gui/goui/platform"
+	"github.com/forbe/goui-legacy/platform"
 )
 
 func TestEventLoop(t *testing.T) {

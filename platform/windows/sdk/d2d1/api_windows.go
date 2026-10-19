@@ -5,10 +5,10 @@ import (
 	"syscall"
 
 	"github.com/goexlib/cgo"
-	"github.com/golang-gui/goui/platform/windows/sdk/com"
-	"github.com/golang-gui/goui/platform/windows/sdk/dwrite"
-	"github.com/golang-gui/goui/platform/windows/sdk/dxgi"
-	"github.com/golang-gui/goui/platform/windows/sdk/wic"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/com"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/dwrite"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/dxgi"
+	"github.com/forbe/goui-legacy/platform/windows/sdk/wic"
 )
 
 var (

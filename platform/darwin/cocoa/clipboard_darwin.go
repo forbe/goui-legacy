@@ -2,10 +2,10 @@ package cocoa
 
 import (
 	"errors"
-	"github.com/golang-gui/goui/platform/common"
+	"github.com/forbe/goui-legacy/platform/common"
 
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/appkit"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/foundation"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/appkit"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/foundation"
 )
 
 // NSPasteboardTypeString's documented UTI value; used directly to avoid binding

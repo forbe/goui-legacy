@@ -4,10 +4,10 @@ import (
 	"image/color"
 	"testing"
 
-	"github.com/golang-gui/goui/core/colors"
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/platform/graphics"
-	"github.com/golang-gui/goui/style"
+	"github.com/forbe/goui-legacy/core/colors"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/platform/graphics"
+	"github.com/forbe/goui-legacy/style"
 )
 
 // useTestApplication installs app as the global application for the duration of

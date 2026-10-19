@@ -3,7 +3,7 @@ package svg
 import (
 	"bytes"
 	"fmt"
-	"github.com/golang-gui/goui/gui"
+	"github.com/forbe/goui-legacy/gui"
 	"image"
 	"image/color"
 	"strings"

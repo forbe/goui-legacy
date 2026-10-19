@@ -4,7 +4,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/golang-gui/goui/platform/typography/internal/typographytest"
+	"github.com/forbe/goui-legacy/platform/typography/internal/typographytest"
 )
 
 func TestTabWidth(t *testing.T) {

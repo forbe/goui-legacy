@@ -3,13 +3,13 @@ package frameworks
 import (
 	"sync"
 
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/appkit"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/core_foundation"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/core_graphics"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/core_text"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/foundation"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/opengl"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/security"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/appkit"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/core_foundation"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/core_graphics"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/core_text"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/foundation"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/opengl"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/security"
 )
 
 var (

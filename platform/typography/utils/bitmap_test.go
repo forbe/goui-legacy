@@ -8,7 +8,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/golang-gui/goui/platform/typography"
+	"github.com/forbe/goui-legacy/platform/typography"
 )
 
 func TestCopyBitmap(t *testing.T) {

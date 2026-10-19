@@ -3,7 +3,7 @@ package widgets
 import (
 	"slices"
 
-	"github.com/golang-gui/goui/core/signal"
+	"github.com/forbe/goui-legacy/core/signal"
 )
 
 // TreeModel describes an ordered, acyclic tree on the GUI thread. Empty ID is

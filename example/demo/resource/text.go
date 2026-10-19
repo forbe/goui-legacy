@@ -1,7 +1,7 @@
 // Package resource contains display text and initial samples, not IDs or user edits.
 package resource
 
-import "github.com/golang-gui/goui/mlang"
+import "github.com/forbe/goui-legacy/mlang"
 
 func text(en, zh, ja, ko, de, fr, ru, ar string) mlang.Getter {
 	return mlang.String(mlang.En(en), mlang.ZhCN(zh), mlang.Ja(ja), mlang.Ko(ko), mlang.De(de), mlang.Fr(fr), mlang.Ru(ru), mlang.Ar(ar))

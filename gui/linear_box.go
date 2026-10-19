@@ -1,6 +1,6 @@
 package gui
 
-import "github.com/golang-gui/goui/layout"
+import "github.com/forbe/goui-legacy/layout"
 
 type LinearBox struct {
 	WidgetBase

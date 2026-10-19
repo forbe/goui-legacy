@@ -1,6 +1,6 @@
 package layout
 
-import "github.com/golang-gui/goui/core/geometry"
+import "github.com/forbe/goui-legacy/core/geometry"
 
 // Inf is the sentinel for an unbounded constraint axis (avoids raw math.Inf and
 // its NaN pitfalls). Used e.g. by a scroll view on its scroll axis.

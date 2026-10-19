@@ -3,8 +3,8 @@ package ui
 import (
 	"testing"
 
-	"github.com/golang-gui/goui/gui"
-	"github.com/golang-gui/goui/platform/events"
+	"github.com/forbe/goui-legacy/gui"
+	"github.com/forbe/goui-legacy/platform/events"
 )
 
 func TestShortcutReconciliation(t *testing.T) {

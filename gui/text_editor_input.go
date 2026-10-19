@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang-gui/goui/core/geometry"
-	"github.com/golang-gui/goui/gui/textedit"
-	"github.com/golang-gui/goui/platform/events"
+	"github.com/forbe/goui-legacy/core/geometry"
+	"github.com/forbe/goui-legacy/gui/textedit"
+	"github.com/forbe/goui-legacy/platform/events"
 )
 
 func (t *textEditor) imContext() IMContext {

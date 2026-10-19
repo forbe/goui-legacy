@@ -5,8 +5,8 @@ import (
 	"math"
 	"time"
 
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/platform"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/platform"
 	"golang.org/x/text/language"
 )
 

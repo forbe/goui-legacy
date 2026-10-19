@@ -11,15 +11,15 @@ import (
 	"strings"
 	"unsafe"
 
-	"github.com/golang-gui/goui/core/signal"
-	"github.com/golang-gui/goui/platform/typography"
-	"github.com/golang-gui/goui/platform/typography/internal/lifecycle"
-	"github.com/golang-gui/goui/platform/typography/utils"
+	"github.com/forbe/goui-legacy/core/signal"
+	"github.com/forbe/goui-legacy/platform/typography"
+	"github.com/forbe/goui-legacy/platform/typography/internal/lifecycle"
+	"github.com/forbe/goui-legacy/platform/typography/utils"
 
-	"github.com/golang-gui/goui/platform/darwin/frameworks"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/core_foundation"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/core_graphics"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/core_text"
+	"github.com/forbe/goui-legacy/platform/darwin/frameworks"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/core_foundation"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/core_graphics"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/core_text"
 )
 
 type Context struct {

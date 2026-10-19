@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/golang-gui/goui/core/geometry"
+	"github.com/forbe/goui-legacy/core/geometry"
 )
 
 // Window is thread-affine. All methods must be called on the thread that owns

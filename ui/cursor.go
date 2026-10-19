@@ -1,6 +1,6 @@
 package ui
 
-import "github.com/golang-gui/goui/gui"
+import "github.com/forbe/goui-legacy/gui"
 
 // Cursor re-exports the gui cursor value type so ui consumers use ui types only,
 // without importing the gui or platform packages (same pattern as ColorScheme).

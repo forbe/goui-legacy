@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"unsafe"
 
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/core_foundation"
-	. "github.com/golang-gui/goui/platform/darwin/frameworks/core_graphics"
-	"github.com/golang-gui/goui/platform/darwin/frameworks/utils"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/core_foundation"
+	. "github.com/forbe/goui-legacy/platform/darwin/frameworks/core_graphics"
+	"github.com/forbe/goui-legacy/platform/darwin/frameworks/utils"
 
 	"github.com/goexlib/cgo"
 )
