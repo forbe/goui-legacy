@@ -141,11 +141,13 @@ func (c *Context) AddFontData(data []byte) error {
 	if c.fontData[key] {
 		return nil
 	}
-	if err := c.ensureFontFactory(); err != nil {
-		return err
-	}
+	// Probe the loader first: it is the strictest requirement, so a system without it
+	// reports ErrUnsupported before any font-set call can fail with a lesser error.
 	loader, err := c.ensureInMemoryLoader()
 	if err != nil {
+		return err
+	}
+	if err := c.ensureFontFactory(); err != nil {
 		return err
 	}
 	file, hr := loader.CreateInMemoryFontFileReference(c.dwFactory, data, nil)
