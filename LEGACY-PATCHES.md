@@ -9,8 +9,12 @@ it is ours. Measured on Windows 11, Windows 10 (pre-1607) and Windows 7 SP1.
 | 1 | `platform/windows/sdk/winapi/api_windows.go:535`, `:556` | `AdjustWindowRectExForDpi` is missing before Windows 10 1607, so window creation aborts with `Failed to find AdjustWindowRectExForDpi` | Keep the DPI-aware call where it exists, otherwise fall back to `AdjustWindowRectEx` at DPI 96 |
 | 2 | `platform/windows/win32/platform_windows.go:128`, `:141` | The painter chain D2D → OpenGL → software silently degraded, which made a blank window undiagnosable | Log the downgrade once |
 | 3 | `platform/typography/directwrite/context_windows.go:235` | `ID2D1Factory1` and `CLSID_WICImagingFactory2` are not always present | Request 1.1 / WIC2 first, then settle for `ID2D1Factory` / WIC1 |
-| 4 | `platform/typography/directwrite/context_windows.go:729` | `D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT` makes `EndDraw` return `E_INVALIDARG` on a DirectWrite that cannot enumerate color glyph runs, so no text is drawn at all | Probe `IID_IDWriteFactory2` once at context creation and only pass the flag when it answers |
+| 4 | `platform/typography/directwrite/context_windows.go:561` (`TextLayout.DrawOptions`), used at `:735` and `platform/graphics/direct2d/painter_windows.go:935` | `D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT` makes `EndDraw` return `E_INVALIDARG` on a DirectWrite that cannot enumerate color glyph runs, so no text is drawn at all | Probe `IID_IDWriteFactory2` once at context creation; both draw paths now take their options from `DrawOptions`, which adds the flag only when the probe answered |
 | 5 | `platform/graphics/software/painter.go:415` | A text raster failure was swallowed, leaving invisible text with no trace | Log the first failure; an empty bitmap stays silent because empty text is normal |
+
+Both `ENABLE_COLOR_FONT` call sites are covered: the offscreen raster path every
+painter uses, and the window Direct2D painter's own `DrawTextLayout` (which also
+discarded the draw error before; it now reports the first failure once).
 
 Note on patch 4: capability cannot be inferred from the Direct2D version. Windows 7
 SP1 with the platform update reports Direct2D 1.1 and has WIC2, yet its DirectWrite

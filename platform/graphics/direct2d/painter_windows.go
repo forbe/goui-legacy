@@ -3,6 +3,8 @@ package direct2d
 import (
 	"fmt"
 	"image"
+	"log"
+	"sync"
 	"unsafe"
 
 	"github.com/golang-gui/goui/core/geometry"
@@ -926,13 +928,25 @@ func (p *Painter) DrawPath(path graphics.Path, strokeWidth float32, brush graphi
 	}
 }
 
+// textDrawOnce reports the first dropped text draw only: the same failure repeats
+// per label per frame.
+var textDrawOnce sync.Once
+
 func (p *Painter) DrawTextLayout(origin graphics.Point, layout typography.TextLayout) {
 	if !p.activeFrame {
 		return
 	}
 	if textLayout, ok := layout.(*directwrite.TextLayout); ok {
 		point := d2d1.Point2F{X: origin.X, Y: origin.Y}
-		textLayout.Draw(&p.render.RenderTarget, point, d2d1.D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT|d2d1.D2D1_DRAW_TEXT_OPTIONS_CLIP)
+		err := textLayout.Draw(&p.render.RenderTarget, point,
+			textLayout.DrawOptions(d2d1.D2D1_DRAW_TEXT_OPTIONS_CLIP))
+		if err != nil {
+			// Drawing is per widget per frame and the interface method has no error
+			// channel, so report the first failure only.
+			textDrawOnce.Do(func() {
+				log.Printf("direct2d painter: text draw failed (%v), text is not drawn", err)
+			})
+		}
 	}
 }
 

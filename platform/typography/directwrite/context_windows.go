@@ -563,6 +563,17 @@ func (t *TextLayout) MeasureSize() (width, height float32) {
 	return
 }
 
+// DrawOptions adds D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT only when this
+// system's DirectWrite can enumerate color glyph runs. A 1.0 DirectWrite rejects
+// the option with E_INVALIDARG from EndDraw, which drops the whole text run, so
+// every caller takes its options from here rather than setting the bit itself.
+func (t *TextLayout) DrawOptions(drawOptions d2d1.DrawTextOptions) d2d1.DrawTextOptions {
+	if t.ctx.colorFont {
+		drawOptions |= d2d1.D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT
+	}
+	return drawOptions
+}
+
 func (t *TextLayout) Draw(render *d2d1.RenderTarget, origin d2d1.Point2F, drawOptions d2d1.DrawTextOptions) (err error) {
 	var d2dColor d2d1.ColorF
 
@@ -726,13 +737,7 @@ func (p *textPainter) DrawTextLayout(layout *TextLayout, scale float32) (err err
 	p.render.SetDpi(dpi, dpi)
 	p.render.BeginDraw()
 	p.render.Clear(&p.colorf)
-	options := d2d1.D2D1_DRAW_TEXT_OPTIONS_CLIP
-	if layout.ctx.colorFont {
-		// ENABLE_COLOR_FONT needs a DirectWrite that can enumerate color glyph runs;
-		// a 1.0 DirectWrite makes EndDraw fail with E_INVALIDARG, so no text is drawn.
-		options |= d2d1.D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT
-	}
-	err = layout.Draw(p.render, d2d1.Point2F{}, options)
+	err = layout.Draw(p.render, d2d1.Point2F{}, layout.DrawOptions(d2d1.D2D1_DRAW_TEXT_OPTIONS_CLIP))
 	hr := p.render.EndDraw(nil, nil)
 	if err != nil {
 		return fmt.Errorf("directwrite draw text err: %w", err)
