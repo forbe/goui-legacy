@@ -23,9 +23,13 @@ import (
 )
 
 type Context struct {
-	dwFactory      *dwrite.Factory
-	d2dFactory     *d2d1.Factory
-	imgFactory     *wic.ImagingFactory
+	dwFactory  *dwrite.Factory
+	d2dFactory *d2d1.Factory
+	imgFactory *wic.ImagingFactory
+	// colorFont is DirectWrite 1.2+ only, and D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT
+	// is rejected with E_INVALIDARG without it: measured on Windows 7 SP1, where the
+	// platform update supplies Direct2D 1.1 and WIC2 but DirectWrite stays at 1.0.
+	colorFont      bool
 	ownsCOM        bool // true if we called com.Initialize (not skipped)
 	fontFactory    *dwrite.Factory3
 	fontSet        *dwrite.FontSet
@@ -49,6 +53,13 @@ func NewContext() (_ typography.Context, err error) {
 	if err != nil {
 		c.Destroy()
 		return nil, fmt.Errorf("create dwrite factory err: %v", err)
+	}
+	// Probing the later factory by interface tells whether this system's DirectWrite
+	// can enumerate color glyph runs; the object itself is not used.
+	var probe *com.Unknown
+	if hr := c.dwFactory.QueryInterface(dwrite.IID_IDWriteFactory2, &probe); hr.Succeeded() && probe != nil {
+		probe.Release()
+		c.colorFont = true
 	}
 	return c, nil
 }
@@ -221,15 +232,26 @@ func (c *Context) createTextFormat(format typography.TextFormat) (textFormat *dw
 
 func (c *Context) prepareDraw() (err error) {
 	if c.d2dFactory == nil {
+		// The raster path only calls ID2D1Factory methods, but ID2D1Factory1 needs the
+		// Direct2D 1.1 platform update. Ask for 1.1 first so machines that have it keep
+		// their factory, then settle for 1.0 where it is absent.
 		c.d2dFactory, err = d2d1.CreateFactory[d2d1.Factory](d2d1.D2D1_FACTORY_TYPE_SINGLE_THREADED, d2d1.IID_ID2D1Factory1, nil)
 		if err != nil {
-			return fmt.Errorf("create d2d factory err: %v", err)
+			c.d2dFactory, err = d2d1.CreateFactory[d2d1.Factory](d2d1.D2D1_FACTORY_TYPE_SINGLE_THREADED, d2d1.IID_ID2D1Factory, nil)
+			if err != nil {
+				return fmt.Errorf("create d2d factory err: %v", err)
+			}
 		}
 	}
 	if c.imgFactory == nil {
+		// CLSID_WICImagingFactory2 is registered from Windows 8, and on Windows 7 only
+		// with the platform update; both classes answer the IWICImagingFactory used here.
 		c.imgFactory, err = wic.CreateImagingFactory[wic.ImagingFactory](wic.CLSID_WICImagingFactory2, wic.IID_IWICImagingFactory)
 		if err != nil {
-			return fmt.Errorf("create wic factory err: %v", err)
+			c.imgFactory, err = wic.CreateImagingFactory[wic.ImagingFactory](wic.CLSID_WICImagingFactory1, wic.IID_IWICImagingFactory)
+			if err != nil {
+				return fmt.Errorf("create wic factory err: %v", err)
+			}
 		}
 	}
 	return nil
@@ -704,7 +726,13 @@ func (p *textPainter) DrawTextLayout(layout *TextLayout, scale float32) (err err
 	p.render.SetDpi(dpi, dpi)
 	p.render.BeginDraw()
 	p.render.Clear(&p.colorf)
-	err = layout.Draw(p.render, d2d1.Point2F{}, d2d1.D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT|d2d1.D2D1_DRAW_TEXT_OPTIONS_CLIP)
+	options := d2d1.D2D1_DRAW_TEXT_OPTIONS_CLIP
+	if layout.ctx.colorFont {
+		// ENABLE_COLOR_FONT needs a DirectWrite that can enumerate color glyph runs;
+		// a 1.0 DirectWrite makes EndDraw fail with E_INVALIDARG, so no text is drawn.
+		options |= d2d1.D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT
+	}
+	err = layout.Draw(p.render, d2d1.Point2F{}, options)
 	hr := p.render.EndDraw(nil, nil)
 	if err != nil {
 		return fmt.Errorf("directwrite draw text err: %w", err)

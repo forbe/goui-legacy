@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"log"
 	"math"
+	"sync"
 
 	"github.com/golang-gui/goui/core/geometry"
 	"github.com/golang-gui/goui/platform/graphics"
@@ -390,6 +392,11 @@ func (p *Painter) DrawPath(path graphics.Path, strokeWidth float32, brush graphi
 	}
 }
 
+// textRasterOnce reports the first dropped text raster only: the failure is a
+// factory-level one (Direct2D/WIC unavailable), and DrawTextLayout runs per label
+// per frame.
+var textRasterOnce sync.Once
+
 func (p *Painter) DrawTextLayout(origin graphics.Point, layout typography.TextLayout) {
 	if layout == nil {
 		return
@@ -405,7 +412,14 @@ func (p *Painter) DrawTextLayout(origin graphics.Point, layout typography.TextLa
 	}
 
 	textBitmap, err := layout.Rasterize(rasterScale, p.textPixels)
-	if err != nil || textBitmap.Width <= 0 || textBitmap.Height <= 0 {
+	if err != nil {
+		textRasterOnce.Do(func() {
+			log.Printf("software painter: text raster failed (%v), text is not drawn", err)
+		})
+		return
+	}
+	// 空文本走到这里属正常，不是故障。
+	if textBitmap.Width <= 0 || textBitmap.Height <= 0 {
 		return
 	}
 	p.textPixels = textBitmap.Pixels

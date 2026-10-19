@@ -1,3 +1,20 @@
+# goui-legacy — a fork of GOUI v0.2.0 for old Windows
+
+This repository is [golang-gui/goui](https://github.com/golang-gui/goui) v0.2.0 plus
+five compatibility patches that let it start and draw on Windows 7 SP1 and on Windows
+10 before 1607, where upstream aborts. The patches, the measured HRESULTs behind them
+and the verification status per system are in [LEGACY-PATCHES.md](LEGACY-PATCHES.md).
+Nothing else was touched; upstream `LICENSE` and copyright notice are unchanged.
+
+- `main` keeps the upstream module path, so consumers keep their imports and use a
+  directory `replace`.
+- `module-path-rename` declares `github.com/forbe/goui-legacy` and rewrites every
+  internal import, so consumers can `require` it over the network.
+
+Everything below is the original upstream README.
+
+---
+
 <p align="center">
   <img src="doc/logo/goui-logo.svg" width="400" alt="GOUI">
 </p>

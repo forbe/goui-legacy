@@ -1,0 +1,12 @@
+node_modules/
+build/
+dist/
+*.exe
+*.dll
+.env
+
+# written by the package tests
+platform/graphics/software/output.png
+platform/typography/directwrite/text.png
+platform/typography/coretext/text.png
+platform/typography/pango/text.png

@@ -62,6 +62,7 @@ var (
 	procGetSystemMenu            = user32Dll.NewProc("GetSystemMenu")
 	procEnableMenuItem           = user32Dll.NewProc("EnableMenuItem")
 	procRegisterClipboardFormatW = user32Dll.NewProc("RegisterClipboardFormatW")
+	procAdjustWindowRectEx       = user32Dll.NewProc("AdjustWindowRectEx")
 
 	// DPI
 	procGetDpiForWindow               = user32Dll.NewProc("GetDpiForWindow")
@@ -531,12 +532,28 @@ func SetProcessDpiAwarenessContext(value DPI_AWARENESS_CONTEXT) error {
 	return nil
 }
 
+// AdjustWindowRectEx computes the outer window size (frame included) needed to
+// obtain the desired client-area rect, for the given styles, using the metrics
+// of the calling thread's DPI context. Available since Windows 2000.
+func AdjustWindowRectEx(rect *RECT, style, menu, exStyle DWORD) error {
+	ret, _, err := syscall.SyscallN(procAdjustWindowRectEx.Addr(),
+		uintptr(unsafe.Pointer(rect)),
+		uintptr(style), uintptr(menu), uintptr(exStyle))
+	if ret == FALSE {
+		return err
+	}
+	return nil
+}
+
 // AdjustWindowRectExForDpi computes the outer window size (frame included)
 // needed to obtain the desired client-area rect, for the given styles and DPI.
-// Requires Windows 10 1607+. Native lookup and calculation failures are returned.
+// Requires Windows 10 1607+; otherwise the DPI-unaware AdjustWindowRectEx is
+// used, which is equivalent here because the only callers take dpi from
+// GetDpiForSystem or GetDpiForWindow, and those 1607+ entry points report 96
+// when absent. Native lookup and calculation failures are returned.
 func AdjustWindowRectExForDpi(rect *RECT, style, menu, exStyle, dpi DWORD) error {
 	if err := procAdjustWindowRectExForDpi.Find(); err != nil {
-		return err
+		return AdjustWindowRectEx(rect, style, menu, exStyle)
 	}
 	ret, _, err := syscall.SyscallN(procAdjustWindowRectExForDpi.Addr(),
 		uintptr(unsafe.Pointer(rect)),

@@ -2,9 +2,11 @@ package win32
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"runtime"
 	"strconv"
+	"sync"
 	"syscall"
 	"unsafe"
 
@@ -123,6 +125,10 @@ func (p *Platform) NewTypography() (typography.Context, error) {
 	return directwrite.NewContext()
 }
 
+// painterFallbackOnce keeps the downgrade report to one line per session:
+// popups create their own painter, so without it every menu would repeat it.
+var painterFallbackOnce sync.Once
+
 func (p *Platform) NewPainter(surface common.Surface) (painter graphics.Painter, err error) {
 	switch common.GetPreferPainter() {
 	case "opengl":
@@ -132,10 +138,16 @@ func (p *Platform) NewPainter(surface common.Surface) (painter graphics.Painter,
 	default:
 		// D2D → OpenGL → Software
 		if painter, err = direct2d.NewPainter(surface); err != nil {
-			// TODO: add log
+			d2dErr := err
 			if painter, err = opengl.NewPainter(surface); err != nil {
+				painterFallbackOnce.Do(func() {
+					log.Printf("painter downgrade: direct2d unavailable (%v), opengl unavailable (%v), using software", d2dErr, err)
+				})
 				return newSoftwarePainter(surface)
 			}
+			painterFallbackOnce.Do(func() {
+				log.Printf("painter downgrade: direct2d unavailable (%v), using opengl", d2dErr)
+			})
 		}
 		return
 	}
