@@ -8,6 +8,7 @@ import "github.com/golang-gui/goui/core/signal"
 // It owns no native resources.
 type TableColumn struct {
 	id, title                 string
+	note, noteStyle           string
 	width, minWidth, maxWidth float32
 	resizable, sortable       bool
 	delegate                  TableCellDelegate
@@ -34,6 +35,19 @@ func (c *TableColumn) SetTitle(title string) {
 		return
 	}
 	c.title = title
+	if c.owner != nil {
+		c.owner.updateHeaders()
+	}
+}
+
+// SetHeaderNote installs a secondary header caption drawn after the title with
+// its own style name. Empty text hides it. An empty style name keeps the
+// header's default text style.
+func (c *TableColumn) SetHeaderNote(text, styleName string) {
+	if c.note == text && c.noteStyle == styleName {
+		return
+	}
+	c.note, c.noteStyle = text, styleName
 	if c.owner != nil {
 		c.owner.updateHeaders()
 	}

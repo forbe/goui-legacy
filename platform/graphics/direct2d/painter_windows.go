@@ -59,6 +59,7 @@ type Painter struct {
 	matrix               d2d1.Matrix3x2F
 	activeFrame          bool
 	deferredFrame        bool
+	destroyed            bool
 	occluded             bool
 	swapChainFlags       uint32
 	frameLatencyWaitable winapi.HANDLE
@@ -113,6 +114,13 @@ func NewPainter(win NativeWindow) (_ graphics.Painter, err error) {
 }
 
 func (p *Painter) createDeviceResources() (err error) {
+	// Destroy releases the factory, so recreating from here would dereference a
+	// nil COM interface at an unrelated call site. Device loss goes through
+	// releaseDeviceResources, which keeps the factory and leaves this flag clear,
+	// so the lazy recovery path stays available.
+	if p.destroyed {
+		panic("direct2d: use painter after Destroy")
+	}
 	levels := []d3d11.FeatureLevel{
 		d3d11.D3D_FEATURE_LEVEL_11_1,
 		d3d11.D3D_FEATURE_LEVEL_11_0,
@@ -120,9 +128,11 @@ func (p *Painter) createDeviceResources() (err error) {
 		d3d11.D3D_FEATURE_LEVEL_10_0,
 	}
 	var hr com.HRESULT
+	var featureLevel d3d11.FeatureLevel
+	var used d3d11.DriverType
 	for _, driver := range []d3d11.DriverType{d3d11.D3D_DRIVER_TYPE_HARDWARE, d3d11.D3D_DRIVER_TYPE_WARP} {
 		var immediate *d3d11.DeviceContext
-		p.d3dDevice, _, immediate, hr = d3d11.CreateDevice(driver, d3d11.D3D11_CREATE_DEVICE_BGRA_SUPPORT, levels)
+		p.d3dDevice, featureLevel, immediate, hr = d3d11.CreateDevice(driver, d3d11.D3D11_CREATE_DEVICE_BGRA_SUPPORT, levels)
 		if hr == com.HRESULT(-2147024809) { // E_INVALIDARG: Windows 7 does not accept feature level 11.1.
 			if immediate != nil {
 				immediate.Release()
@@ -132,12 +142,13 @@ func (p *Painter) createDeviceResources() (err error) {
 				p.d3dDevice.Release()
 				p.d3dDevice = nil
 			}
-			p.d3dDevice, _, immediate, hr = d3d11.CreateDevice(driver, d3d11.D3D11_CREATE_DEVICE_BGRA_SUPPORT, levels[1:])
+			p.d3dDevice, featureLevel, immediate, hr = d3d11.CreateDevice(driver, d3d11.D3D11_CREATE_DEVICE_BGRA_SUPPORT, levels[1:])
 		}
 		if immediate != nil {
 			immediate.Release()
 		}
 		if hr.Succeeded() {
+			used = driver
 			break
 		}
 		if p.d3dDevice != nil {
@@ -148,6 +159,8 @@ func (p *Painter) createDeviceResources() (err error) {
 	if hr.Failed() || p.d3dDevice == nil {
 		return fmt.Errorf("create D3D11 BGRA device: %v", hr)
 	}
+	// 渲染后端影响渐变的色彩解释（硬件 vs WARP、DWM/HDR 路径），出问题时靠这行定位。
+	log.Printf("direct2d: driver=%v feature-level=%v transparent=%v", used, featureLevel, p.transparent)
 
 	var unknown *com.Unknown
 	if hr = p.d3dDevice.QueryInterface(dxgi.IID_IDXGIDevice, &unknown); hr.Failed() {
@@ -155,15 +168,18 @@ func (p *Painter) createDeviceResources() (err error) {
 		return fmt.Errorf("query IDXGIDevice: %v", hr)
 	}
 	p.dxgiDevice = (*dxgi.Device)(unsafe.Pointer(unknown))
-	if p.d2dDevice, hr = p.factory.CreateDevice(p.dxgiDevice); hr.Failed() {
+	p.d2dDevice, hr = p.factory.CreateDevice(p.dxgiDevice)
+	if hr.Failed() || p.d2dDevice == nil {
 		p.releaseDeviceResources()
 		return fmt.Errorf("create Direct2D device: %v", hr)
 	}
-	if p.render, hr = p.d2dDevice.CreateDeviceContext(d2d1.D2D1_DEVICE_CONTEXT_OPTIONS_NONE); hr.Failed() {
+	p.render, hr = p.d2dDevice.CreateDeviceContext(d2d1.D2D1_DEVICE_CONTEXT_OPTIONS_NONE)
+	if hr.Failed() || p.render == nil {
 		p.releaseDeviceResources()
 		return fmt.Errorf("create Direct2D device context: %v", hr)
 	}
-	if p.shadowRender, hr = p.d2dDevice.CreateDeviceContext(d2d1.D2D1_DEVICE_CONTEXT_OPTIONS_NONE); hr.Failed() {
+	p.shadowRender, hr = p.d2dDevice.CreateDeviceContext(d2d1.D2D1_DEVICE_CONTEXT_OPTIONS_NONE)
+	if hr.Failed() || p.shadowRender == nil {
 		p.releaseDeviceResources()
 		return fmt.Errorf("create Direct2D shadow context: %v", hr)
 	}
@@ -351,6 +367,7 @@ func (p *Painter) Destroy() {
 	if p.activeFrame {
 		panic("direct2d: destroy painter during active frame")
 	}
+	p.destroyed = true
 	p.destroyAllImages()
 	p.releaseDeviceResources()
 	if p.factory != nil {
@@ -377,6 +394,10 @@ func (p *Painter) releaseDeviceResources() {
 		p.linearStops.Release()
 		p.linearStops = nil
 	}
+	// 重建后 brush 与 stops 都已释放；不清这个标记，下一次同色渐变会走缓存分支
+	// 去 SetStartPoint 一个 nil brush（以及悬垂 stops 的旧状态）。
+	p.hasLinear = false
+	p.linearStart, p.linearEnd = graphics.Color{}, graphics.Color{}
 	if p.colorBrush != nil {
 		p.colorBrush.Release()
 		p.colorBrush = nil
@@ -1121,7 +1142,9 @@ func d2dColor(c graphics.Color) d2d1.ColorF {
 }
 
 func (p *Painter) setLinearGradient(gradient graphics.LinearGradient) bool {
-	if !p.hasLinear || p.linearStart != gradient.StartColor || p.linearEnd != gradient.EndColor {
+	// linearBrush 为 nil 而 hasLinear 仍为 true 是设备资源重建后的不完整状态，
+	// 必须重建，否则 SetStartPoint 会打在空指针上。
+	if p.linearBrush == nil || !p.hasLinear || p.linearStart != gradient.StartColor || p.linearEnd != gradient.EndColor {
 		if p.linearBrush != nil {
 			p.linearBrush.Release()
 			p.linearBrush = nil

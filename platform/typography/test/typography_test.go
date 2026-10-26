@@ -6,6 +6,7 @@ import (
 	"image/color"
 	"image/png"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/golang-gui/goui/platform"
@@ -143,20 +144,14 @@ func TestTypography(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		err = savePng("text-1x.png", bitmap)
-		if err != nil {
-			t.Fatal(err)
-		}
+		savePng(t, "text-1x.png", bitmap)
 
 		bitmap, err = layout.Rasterize(2.0, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		err = savePng("text-2x.png", bitmap)
-		if err != nil {
-			t.Fatal(err)
-		}
+		savePng(t, "text-2x.png", bitmap)
 	})
 
 	t.Run("normal", func(t *testing.T) {
@@ -170,10 +165,7 @@ func TestTypography(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		err = savePng("normal-text.png", bitmap)
-		if err != nil {
-			t.Fatal(err)
-		}
+		savePng(t, "normal-text.png", bitmap)
 
 		painter, err := newTestPainter(ctx)
 		if err != nil {
@@ -184,10 +176,7 @@ func TestTypography(t *testing.T) {
 		drawLayoutMetrics(painter, layout, green, blue, gray, red)
 		painter.End()
 
-		err = savePng("normal-output.png", painter.result)
-		if err != nil {
-			t.Fatal(err)
-		}
+		savePng(t, "normal-output.png", painter.result)
 	})
 
 	t.Run("small", func(t *testing.T) {
@@ -201,10 +190,7 @@ func TestTypography(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		err = savePng("small-text.png", bitmap)
-		if err != nil {
-			t.Fatal(err)
-		}
+		savePng(t, "small-text.png", bitmap)
 
 		painter, err := newTestPainter(ctx)
 		if err != nil {
@@ -215,10 +201,7 @@ func TestTypography(t *testing.T) {
 		drawLayoutMetrics(painter, layout, green, blue, gray, red)
 		painter.End()
 
-		err = savePng("small-output.png", painter.result)
-		if err != nil {
-			t.Fatal(err)
-		}
+		savePng(t, "small-output.png", painter.result)
 	})
 
 	t.Run("large", func(t *testing.T) {
@@ -232,10 +215,7 @@ func TestTypography(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		err = savePng("large-text.png", bitmap)
-		if err != nil {
-			t.Fatal(err)
-		}
+		savePng(t, "large-text.png", bitmap)
 
 		painter, err := newTestPainter(ctx)
 		if err != nil {
@@ -246,21 +226,22 @@ func TestTypography(t *testing.T) {
 		drawLayoutMetrics(painter, layout, green, blue, gray, red)
 		painter.End()
 
-		err = savePng("large-output.png", painter.result)
-		if err != nil {
-			t.Fatal(err)
-		}
+		savePng(t, "large-output.png", painter.result)
 	})
 }
 
-func savePng(filename string, img image.Image) (err error) {
+// savePng writes a rendered image under the test's temporary directory. Writing
+// it into the package directory turned every test run into untracked files.
+func savePng(t *testing.T, filename string, img image.Image) {
+	t.Helper()
 	var buf bytes.Buffer
 	buf.Grow(img.Bounds().Dx() * img.Bounds().Dy())
-	err = png.Encode(&buf, img)
-	if err != nil {
-		return
+	if err := png.Encode(&buf, img); err != nil {
+		t.Fatal(err)
 	}
-	return os.WriteFile(filename, buf.Bytes(), 0666)
+	if err := os.WriteFile(filepath.Join(t.TempDir(), filename), buf.Bytes(), 0666); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func newRichTextLayout(ctx typography.Context, width, height int, font string, wrap typography.WrapMode, align typography.TextAlignment, textColor graphics.Color) (typography.TextLayout, error) {

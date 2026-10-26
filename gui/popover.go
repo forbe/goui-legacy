@@ -442,11 +442,20 @@ func (p *popover) resetInput() {
 	reset(p.Widget())
 }
 
-// Distinguishes creation/capability failures from failures of native Show.
-// Only PopoverMenu is allowed to retry creation with an opaque configuration.
-type popoverCreationError struct{ error }
+// PopoverCreationError marks a failure of native popup or painter creation, as
+// opposed to a later failure inside Show. Callers may fall back from a
+// transparent to an opaque popup only on this error: a placement query can
+// report ErrUnavailable too, and rebuilding the surface for that fixes nothing.
+// gui.PopoverMenu and widgets.DropDown are the two fallback callers.
+type PopoverCreationError struct{ err error }
 
-func (e *popoverCreationError) Unwrap() error { return e.error }
+// NewPopoverCreationError reports err as a popup creation failure. Callers
+// outside gui need it to exercise their opaque fallback.
+func NewPopoverCreationError(err error) error { return &PopoverCreationError{err: err} }
+
+func (e *PopoverCreationError) Error() string { return e.err.Error() }
+
+func (e *PopoverCreationError) Unwrap() error { return e.err }
 
 // --- native resource lifecycle (belongs to the window) ---
 
@@ -496,7 +505,7 @@ func (p *popover) createNative(win Window) error {
 	}, platform.PopupOptions{Transparent: p.transparent})
 	if err != nil {
 		p.releaseNative()
-		return &popoverCreationError{fmt.Errorf("create platform popup: %w", err)}
+		return NewPopoverCreationError(fmt.Errorf("create platform popup: %w", err))
 	}
 	currentOwner, mounted := anchorWindow(p.anchor)
 	if p.lifecycle != epoch || p.destroyed || !mounted || currentOwner != win {
@@ -508,7 +517,7 @@ func (p *popover) createNative(win Window) error {
 	if err != nil {
 		pp.Destroy()
 		p.releaseNative()
-		return &popoverCreationError{fmt.Errorf("create popover painter: %w", err)}
+		return NewPopoverCreationError(fmt.Errorf("create popover painter: %w", err))
 	}
 	currentOwner, mounted = anchorWindow(p.anchor)
 	if p.lifecycle != epoch || p.destroyed || !mounted || currentOwner != win {

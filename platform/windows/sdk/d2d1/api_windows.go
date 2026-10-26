@@ -108,7 +108,12 @@ type Factory1 struct {
 }
 
 func (this *Factory1) CreateDevice(dxgiDevice *dxgi.Device) (device *Device, hr com.HRESULT) {
-	ret, _, _ := this.class().CreateDevice.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(dxgiDevice)), uintptr(cgo.Pointer(&device)))
+	// out 放在堆上：栈地址转 uintptr 交给 SyscallN 后不保证存活（栈可能增长），
+	// 一旦失效 COM 的写回就落到旧地址，hr 成功但 device 为 nil。
+	out := new(*Device)
+	ret, _, _ := this.class().CreateDevice.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(dxgiDevice)), uintptr(cgo.Pointer(out)))
+	device = *out
+	runtime.KeepAlive(dxgiDevice)
 	return device, com.HRESULT(ret)
 }
 
@@ -592,7 +597,11 @@ type DeviceClass struct {
 type Device struct{ Resource }
 
 func (this *Device) CreateDeviceContext(options DeviceContextOptions) (context *DeviceContext, hr com.HRESULT) {
-	ret, _, _ := (*DeviceClass)(this.Class).CreateDeviceContext.CallRaw(uintptr(cgo.Pointer(this)), uintptr(options), uintptr(cgo.Pointer(&context)))
+	// 同 Factory1.CreateDevice：写回目标放堆上，避免栈地址在 syscall 期间失效。
+	out := new(*DeviceContext)
+	ret, _, _ := (*DeviceClass)(this.Class).CreateDeviceContext.CallRaw(uintptr(cgo.Pointer(this)), uintptr(options), uintptr(cgo.Pointer(out)))
+	context = *out
+	runtime.KeepAlive(this)
 	return context, com.HRESULT(ret)
 }
 

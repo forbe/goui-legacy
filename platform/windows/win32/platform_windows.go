@@ -20,6 +20,7 @@ import (
 	"github.com/golang-gui/goui/platform/internal/desktopopen"
 	"github.com/golang-gui/goui/platform/typography"
 	"github.com/golang-gui/goui/platform/typography/directwrite"
+	"github.com/golang-gui/goui/platform/typography/gotext"
 	"github.com/golang-gui/goui/platform/windows/sdk/com"
 	"github.com/golang-gui/goui/platform/windows/sdk/shell"
 	"github.com/golang-gui/goui/platform/windows/sdk/winapi"
@@ -121,8 +122,28 @@ func (p *Platform) NewImage(width, height uint) (common.Image, error) {
 	return graphics.MakeBitmap(0, 0, int(width), int(height), graphics.PixelFormatBGRA, nil), nil
 }
 
+// typographyFallbackOnce keeps the DirectWrite downgrade report to one line
+// per session, like painterFallbackOnce below.
+var typographyFallbackOnce sync.Once
+
 func (p *Platform) NewTypography() (typography.Context, error) {
-	return directwrite.NewContext()
+	// GOUI_PLAT_TYPOGRAPHY=gotext forces the pure-Go backend even when
+	// DirectWrite works, so it can be exercised on modern systems before
+	// shipping to machines without dwrite.dll.
+	if common.GetPreferTypography() == "gotext" {
+		return gotext.NewContext()
+	}
+	typo, err := directwrite.NewContext()
+	if err == nil {
+		return typo, nil
+	}
+	// Systems without dwrite.dll (for example Windows Server 2008 without the
+	// platform update KB2670831) lose text layout entirely otherwise, so fall
+	// back to the pure-Go backend.
+	typographyFallbackOnce.Do(func() {
+		log.Printf("typography fallback: DirectWrite unavailable (%v), using pure-Go backend", err)
+	})
+	return gotext.NewContext()
 }
 
 // painterFallbackOnce keeps the downgrade report to one line per session:

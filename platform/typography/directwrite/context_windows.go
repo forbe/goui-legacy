@@ -50,7 +50,11 @@ func NewContext() (_ typography.Context, err error) {
 	// Uninitialize on destroy since the platform owns the lifetime.
 	already := com.IsInitialized()
 	hr := com.Initialize(com.COINIT_APARTMENTTHREADED)
-	if hr.Failed() {
+	if hr == com.RPC_E_CHANGED_MODE {
+		// The thread already has an apartment in another concurrency model, so
+		// the activation works and there is nothing of ours to release later.
+		already = true
+	} else if hr.Failed() {
 		return nil, fmt.Errorf("com initialize err: %v", hr)
 	}
 
@@ -320,6 +324,15 @@ func (c *Context) createTextFormat(format typography.TextFormat) (textFormat *dw
 }
 
 func (c *Context) prepareDraw() (err error) {
+	// CoCreateInstance needs an apartment on the calling thread. The raster
+	// may run on a thread that never initialized COM, and without an apartment
+	// the WIC factory below fails with CO_E_NOTINITIALIZED, so the text of
+	// that frame never appears.
+	if !com.IsInitialized() {
+		if hr := com.Initialize(com.COINIT_APARTMENTTHREADED); hr.Failed() && hr != com.RPC_E_CHANGED_MODE {
+			return fmt.Errorf("initialize com err: %v", hr)
+		}
+	}
 	if c.d2dFactory == nil {
 		// The raster path only calls ID2D1Factory methods, but ID2D1Factory1 needs the
 		// Direct2D 1.1 platform update. Ask for 1.1 first so machines that have it keep
@@ -778,36 +791,72 @@ type textPainter struct {
 	colorf d2d1.ColorF
 	bitmap *wic.Bitmap
 	render *d2d1.RenderTarget
+	bgra   bool
 }
 
-func (p *textPainter) Init(d2dFactory *d2d1.Factory, imgFactory *wic.ImagingFactory, width, height float32) (err error) {
-	p.width = width
-	p.height = height
-	wicPixelFormat := wic.GUID_WICPixelFormat32bppPRGBA
-	d2dPixelFormat := d2d1.PixelFormat{
-		Format:    dxgi.DXGI_FORMAT_R8G8B8A8_UNORM,
-		AlphaMode: d2d1.D2D1_ALPHA_MODE_PREMULTIPLIED,
-	}
+// wicPRGBAFailed records whether WIC rejects 32bppPRGBA. That format only
+// exists in WIC2 (KB2670831+); WIC1 on Win7 / Server 2008 R2 without the
+// update fails CreateWicBitmapRenderTarget with
+// WINCODEC_ERR_UNSUPPORTEDPIXELFORMAT (0x88982F80). Once observed, all
+// subsequent Inits go straight to PBGRA.
+var wicPRGBAFailed atomic.Bool
 
+const wicErrUnsupportedPixelFormat = com.HRESULT(-2003292288) // 0x88982F80
+
+func (p *textPainter) Init(d2dFactory *d2d1.Factory, imgFactory *wic.ImagingFactory, width, height float32) error {
+	// 先清零旧指针，防止 Init 中途失败留下 dangling pointer
+	p.render = nil
+	p.bitmap = nil
+	p.bgra = wicPRGBAFailed.Load()
+
+	// 容量只在成功后记录。失败的 Init 留下容量会让 rasterize 以为资源还在，
+	// 不再重试 Init，之后每一帧都画不出文字。
+	if !p.bgra {
+		hr, err := p.create(d2dFactory, imgFactory, wic.GUID_WICPixelFormat32bppPRGBA, dxgi.DXGI_FORMAT_R8G8B8A8_UNORM, width, height)
+		if err == nil {
+			p.width, p.height = width, height
+			return nil
+		}
+		if hr != wicErrUnsupportedPixelFormat {
+			return err
+		}
+		// WIC1 不认识 PRGBA：记住结论，本次改用 PBGRA 重试
+		wicPRGBAFailed.Store(true)
+		p.bgra = true
+	}
+	if _, err := p.create(d2dFactory, imgFactory, wic.GUID_WICPixelFormat32bppPBGRA, dxgi.DXGI_FORMAT_B8G8R8A8_UNORM, width, height); err != nil {
+		return err
+	}
+	p.width, p.height = width, height
+	return nil
+}
+
+func (p *textPainter) create(d2dFactory *d2d1.Factory, imgFactory *wic.ImagingFactory, wicFormat com.GUID, d2dFormat dxgi.Format, width, height float32) (com.HRESULT, error) {
 	var hr com.HRESULT
-	p.bitmap, hr = imgFactory.CreateBitmap(roundPixel(width), roundPixel(height), wicPixelFormat, wic.WICBitmapCacheOnLoad)
+	p.bitmap, hr = imgFactory.CreateBitmap(roundPixel(width), roundPixel(height), wicFormat, wic.WICBitmapCacheOnLoad)
 	if hr.Failed() {
-		return fmt.Errorf("create wic bitmap err: %v", hr)
+		return hr, fmt.Errorf("create wic bitmap err: %v", hr)
 	}
 
 	props := d2d1.RenderTargetProperties{
-		PixelFormat: d2dPixelFormat,
-		DpiX:        96,
-		DpiY:        96,
+		PixelFormat: d2d1.PixelFormat{
+			Format:    d2dFormat,
+			AlphaMode: d2d1.D2D1_ALPHA_MODE_PREMULTIPLIED,
+		},
+		DpiX: 96,
+		DpiY: 96,
 	}
 
 	p.render, hr = d2dFactory.CreateWicBitmapRenderTarget(p.bitmap, &props)
 	if hr.Failed() {
-		return fmt.Errorf("create d2d wic bitmap render target err: %v", hr)
+		// CreateBitmap 成功了但 CreateWicBitmapRenderTarget 失败，必须释放 bitmap
+		p.bitmap.Release()
+		p.bitmap = nil
+		return hr, fmt.Errorf("create d2d wic bitmap render target err: %v", hr)
 	}
 
 	p.render.SetTextAntialiasMode(d2d1.D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE)
-	return nil
+	return 0, nil
 }
 
 func (p *textPainter) Destroy() {
@@ -819,9 +868,16 @@ func (p *textPainter) Destroy() {
 		p.bitmap.Release()
 		p.bitmap = nil
 	}
+	// Capacity is only meaningful together with the resources sized to it. An Init
+	// that recorded it and then failed would otherwise keep rasterize from calling
+	// Init again, so every later frame draws no text at all.
+	p.width, p.height = 0, 0
 }
 
 func (p *textPainter) DrawTextLayout(layout *TextLayout, scale float32) (err error) {
+	if p.render == nil {
+		return fmt.Errorf("textPainter: render target is nil (Init failed or not called)")
+	}
 	dpi := scale * 96
 	p.render.SetDpi(dpi, dpi)
 	p.render.BeginDraw()
@@ -838,6 +894,9 @@ func (p *textPainter) DrawTextLayout(layout *TextLayout, scale float32) (err err
 }
 
 func (p *textPainter) GetBitmap(width, height float32, buf []byte) (bitmap typography.TextBitmap, err error) {
+	if p.bitmap == nil {
+		return bitmap, fmt.Errorf("textPainter: wic bitmap is nil (Init failed or not called)")
+	}
 	bitmap.Width = roundPixel(width)
 	bitmap.Height = roundPixel(height)
 	bitmap.Stride = bitmap.Width * 4
@@ -854,7 +913,14 @@ func (p *textPainter) GetBitmap(width, height float32, buf []byte) (bitmap typog
 	}
 	hr := p.bitmap.CopyPixels(&rect, bitmap.Stride, bitmap.Pixels)
 	if hr.Failed() {
-		return bitmap, fmt.Errorf("copy bitmap pixels err: %w", err)
+		return bitmap, fmt.Errorf("copy bitmap pixels err: %w", hr)
+	}
+
+	if p.bgra {
+		// PBGRA 内存布局是 B,G,R,A；框架契约是预乘 RGBA，就地交换 R/B
+		for i := 0; i+3 < len(bitmap.Pixels); i += 4 {
+			bitmap.Pixels[i], bitmap.Pixels[i+2] = bitmap.Pixels[i+2], bitmap.Pixels[i]
+		}
 	}
 
 	return bitmap, nil

@@ -4,6 +4,7 @@ go 1.24
 
 require (
 	github.com/ebitengine/purego v0.10.0
+	github.com/go-text/typesetting v0.3.5
 	github.com/goexlib/cgo v0.1.0
 	github.com/goexlib/mathx v0.0.1
 	github.com/golang-gui/nanovgo v0.0.8

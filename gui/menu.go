@@ -177,7 +177,7 @@ func (pm *PopoverMenu) show(placement PopoverPlacement, pos geometry.Point) erro
 		return pm.popover.Show()
 	}
 	err := show()
-	var creation *popoverCreationError
+	var creation *PopoverCreationError
 	if !pm.popover.Transparent() || !errors.As(err, &creation) || (!errors.Is(err, platform.ErrUnsupported) && !errors.Is(err, platform.ErrUnavailable)) {
 		if err != nil {
 			pm.popover.(*popover).releaseNative()

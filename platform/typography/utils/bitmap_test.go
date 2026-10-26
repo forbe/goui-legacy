@@ -6,6 +6,7 @@ import (
 	"image/color"
 	"image/png"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/golang-gui/goui/platform/typography"
@@ -29,16 +30,10 @@ func TestCopyBitmap(t *testing.T) {
 		}
 	}
 
-	err := savePng("src.png", &src)
-	if err != nil {
-		t.Fatal(err)
-	}
+	savePng(t, "src.png", &src)
 
 	dst := CopyBitmap(src, 80, 80, nil)
-	err = savePng("dst.png", &dst)
-	if err != nil {
-		t.Fatal(err)
-	}
+	savePng(t, "dst.png", &dst)
 }
 
 func TestReverseBitmap(t *testing.T) {
@@ -47,15 +42,9 @@ func TestReverseBitmap(t *testing.T) {
 	bitmap.Height = 1
 	bitmap.Stride = bitmap.Width * 4
 	bitmap.Pixels = makeLine(bitmap.Stride, color.RGBA{R: 255, A: 255})
-	err := savePng("red.png", &bitmap)
-	if err != nil {
-		t.Fatal(err)
-	}
+	savePng(t, "red.png", &bitmap)
 	ReverseBitmap(bitmap)
-	err = savePng("blue.png", &bitmap)
-	if err != nil {
-		t.Fatal(err)
-	}
+	savePng(t, "blue.png", &bitmap)
 }
 
 func makeLine(stride int, c color.Color) []byte {
@@ -70,10 +59,15 @@ func makeLine(stride int, c color.Color) []byte {
 	return line
 }
 
-func savePng(filename string, img image.Image) error {
+// savePng writes a rendered image under the test's temporary directory. Writing
+// it into the package directory turned every test run into untracked files.
+func savePng(t *testing.T, filename string, img image.Image) {
+	t.Helper()
 	var buf bytes.Buffer
 	if err := png.Encode(&buf, img); err != nil {
-		return err
+		t.Fatal(err)
 	}
-	return os.WriteFile(filename, buf.Bytes(), 0666)
+	if err := os.WriteFile(filepath.Join(t.TempDir(), filename), buf.Bytes(), 0666); err != nil {
+		t.Fatal(err)
+	}
 }

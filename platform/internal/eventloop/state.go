@@ -1,6 +1,10 @@
 package eventloop
 
-import "sync"
+import (
+	"log"
+	"runtime/debug"
+	"sync"
+)
 
 // State stores tasks shared between a platform event loop and other
 // goroutines. The platform backend is responsible for waking its native loop
@@ -98,6 +102,18 @@ func (s *State) Destroyed() bool {
 func (s *State) RunTasks() {
 	tasks, _ := s.Take()
 	for _, task := range tasks {
-		task()
+		runTask(task)
 	}
+}
+
+// runTask keeps one panicking task (a TickFunc or Post closure) from killing
+// the process: this runs on the platform message-loop stack, where no other
+// recover exists, and under a -H windowsgui build a panic here exits silently.
+func runTask(task func()) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("goui: task panic recovered: %v\n%s", r, debug.Stack())
+		}
+	}()
+	task()
 }

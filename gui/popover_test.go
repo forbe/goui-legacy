@@ -780,7 +780,7 @@ func TestPopoverPlacementErrorsAreNotTransparencyFailures(t *testing.T) {
 		w.err = queryErr
 		p.transparent = true
 		err := p.Show()
-		var creation *popoverCreationError
+		var creation *PopoverCreationError
 		if !errors.Is(err, queryErr) || errors.As(err, &creation) || len(plat.created) != 0 {
 			t.Fatal(err, plat.created)
 		}

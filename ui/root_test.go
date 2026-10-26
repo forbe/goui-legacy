@@ -644,6 +644,8 @@ func (w *testWindow) Show() error {
 	return w.showErr
 }
 
+func (w *testWindow) Hide() error { return nil }
+
 func (w *testWindow) RequestClose() error {
 	allow := true
 	w.closeRequest.Emit(&allow)

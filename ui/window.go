@@ -107,6 +107,15 @@ func (w WindowView) SkipTaskbar(skip bool) WindowView {
 	return w
 }
 
+// Rounded requests rounded corners for the window. Only effective on Windows 11+
+// with WindowChromeNone or WindowChromeIntegrated. The radius is in DIP units;
+// 0 uses the system default (typically 8-10 DIP). Creation-only setting.
+func (w WindowView) Rounded(radius float32) WindowView {
+	w.options.Rounded = true
+	w.options.CornerRadius = radius
+	return w
+}
+
 // Center requests initial client-area centering in the window's work area.
 // It is creation-only, using the initial Size, and never reapplied on rebuild
 // or Show. False preserves platform defaults; a later SetPosition overrides it.

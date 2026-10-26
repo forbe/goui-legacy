@@ -1186,15 +1186,21 @@ func TestImageReleaseOnPresentFailure(t *testing.T) {
 			}
 			p.Begin(2, 2, 1)
 			img.Destroy()
-			func() {
-				defer func() {
-					got, ok := recover().(error)
-					if !ok || !errors.Is(got, want) {
-						t.Fatalf("lost present failure: %v", got)
-					}
+			if panics {
+				func() {
+					defer func() {
+						got, ok := recover().(error)
+						if !ok || !errors.Is(got, want) {
+							t.Fatalf("drawer panic lost: %v", got)
+						}
+					}()
+					p.End()
 				}()
+			} else {
+				// A present failure is dropped with the frame, not fatal: End
+				// must return normally and still release pending images.
 				p.End()
-			}()
+			}
 			if p.activeFrame || p.pendingImages != 0 || len(p.images) != 0 || resource.owner != nil || resource.bitmap.Pixels != nil || resource.pendingDestroy {
 				t.Fatal("failed End retained image or frame state")
 			}

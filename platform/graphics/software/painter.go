@@ -183,7 +183,10 @@ func (p *Painter) End() {
 			Stride: p.bgra.Stride, Format: graphics.PixelFormatBGRA, Pixels: p.bgra.Pix,
 		})
 		if err != nil {
-			panic(fmt.Errorf("software: present: %w", err))
+			// GDI present failures (GetDC / StretchDIBits) are transient; the D2D
+			// backend treats its equivalents as data. Drop this frame instead of
+			// killing the process — the next paint re-presents.
+			log.Printf("software: present failed, dropping frame: %v", err)
 		}
 		return
 	}
@@ -209,7 +212,9 @@ func (p *Painter) End() {
 		Pixels: p.outputBuf,
 	})
 	if err != nil {
-		panic(fmt.Errorf("software: present: %w", err))
+		// See the transparent branch: a transient GDI failure drops this frame
+		// rather than panicking on the WM_PAINT stack.
+		log.Printf("software: present failed, dropping frame: %v", err)
 	}
 }
 

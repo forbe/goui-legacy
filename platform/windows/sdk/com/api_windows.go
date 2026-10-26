@@ -2,6 +2,7 @@ package com
 
 import (
 	"runtime"
+	"sync"
 	"syscall"
 	"unsafe"
 
@@ -10,6 +11,8 @@ import (
 
 var (
 	ole32            = cgo.NewLazyLibrary("Ole32.dll")
+	kernel32         = cgo.NewLazyLibrary("kernel32.dll")
+	getCurrentThread = kernel32.NewSymbol("GetCurrentThreadId")
 	coInitializeEx   = ole32.NewSymbol("CoInitializeEx")
 	coUninitialize   = ole32.NewSymbol("CoUninitialize")
 	coCreateInstance = ole32.NewSymbol("CoCreateInstance")
@@ -22,47 +25,121 @@ var (
 	releaseStgMedium = ole32.NewSymbol("ReleaseStgMedium")
 )
 
-var comInitialized bool
+// An apartment belongs to a thread, not to the process. A process-wide flag
+// made a second OS thread believe it already had one, so it skipped
+// CoInitializeEx and the next CoCreateInstance failed with CO_E_NOTINITIALIZED.
+var (
+	apartmentMu sync.Mutex
+	apartments  = map[uint32]*apartment{}
+)
 
-func IsInitialized() bool {
-	return comInitialized
+// apartment records which initializers a thread owns. OleInitialize brings a
+// CoInitializeEx of its own, so a thread that only initialized OLE has to be
+// released with OleUninitialize. Releasing it with CoUninitialize drops the
+// count below the number of initializations, which COM does not allow.
+type apartment struct {
+	ole bool // OleInitialize was called on this thread
+	com bool // CoInitializeEx was called on this thread
 }
 
+func currentThread() uint32 {
+	ret, _, _ := getCurrentThread.CallRaw()
+	return uint32(ret)
+}
+
+// IsInitialized reports whether the calling thread has a COM apartment.
+func IsInitialized() bool {
+	apartmentMu.Lock()
+	defer apartmentMu.Unlock()
+	return apartments[currentThread()] != nil
+}
+
+// Initialize gives the calling thread a COM apartment. A thread that already
+// has one keeps it: the concurrency model of an apartment cannot be changed.
 func Initialize(coInit COINIT) HRESULT {
-	if comInitialized {
-		return 0 // S_OK: already initialized
+	tid := currentThread()
+	apartmentMu.Lock()
+	_, ok := apartments[tid]
+	apartmentMu.Unlock()
+	if ok {
+		return 0 // S_OK: this thread already has an apartment
 	}
 	ret, _, _ := coInitializeEx.CallRaw(0, uintptr(coInit))
 	hr := HRESULT(ret)
 	if hr.Succeeded() {
-		comInitialized = true
+		apartmentMu.Lock()
+		apartments[tid] = &apartment{com: true}
+		apartmentMu.Unlock()
 	}
 	return hr
 }
 
+// Uninitialize releases the COM apartment of the calling thread. It leaves the
+// thread alone when the apartment came from OleInitialize, because
+// OleUninitialize owns that count, and when the thread has no apartment of its
+// own: releasing an apartment that was never set up unbalances the count.
 func Uninitialize() {
+	tid := currentThread()
+	apartmentMu.Lock()
+	a := apartments[tid]
+	if a == nil || !a.com {
+		apartmentMu.Unlock()
+		return
+	}
+	a.com = false
+	if !a.ole {
+		delete(apartments, tid)
+	}
+	apartmentMu.Unlock()
 	coUninitialize.CallRaw()
-	comInitialized = false
 }
 
 // InitializeOLE prepares the current STA for clipboard and drag-and-drop in
 // addition to ordinary COM. Each successful call must pair with
 // UninitializeOLE on the same OS thread.
 func InitializeOLE() HRESULT {
+	tid := currentThread()
+	apartmentMu.Lock()
+	a := apartments[tid]
+	hasOLE := a != nil && a.ole
+	apartmentMu.Unlock()
+	if hasOLE {
+		return 0 // S_OK: this thread already has an OLE apartment
+	}
 	ret, _, _ := oleInitialize.CallRaw(0)
 	hr := HRESULT(ret)
-	if hr.Succeeded() {
-		comInitialized = true
+	if hr.Failed() {
+		return hr
 	}
+	apartmentMu.Lock()
+	a = apartments[tid]
+	if a == nil {
+		a = &apartment{}
+		apartments[tid] = a
+	}
+	a.ole = true
+	apartmentMu.Unlock()
 	return hr
 }
 
+// UninitializeOLE releases the OLE apartment of the calling thread. It leaves
+// the thread alone when the thread never called OleInitialize: the OLE count
+// of such a thread is zero, and dropping it below zero is what COM refuses to
+// allow.
 func UninitializeOLE() {
-	if !comInitialized {
+	tid := currentThread()
+	apartmentMu.Lock()
+	a := apartments[tid]
+	if a == nil || !a.ole {
+		apartmentMu.Unlock()
 		return
 	}
+	a.ole = false
+	if !a.com {
+		delete(apartments, tid)
+	}
+	apartmentMu.Unlock()
 	oleUninitialize.CallRaw()
-	comInitialized = false
 }
 
 func CreateInstance[T isUnknown](clsid CLSID, outer **T, clsCtx CLSCTX, iid IID) (inst *T, hr HRESULT) {

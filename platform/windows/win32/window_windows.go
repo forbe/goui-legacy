@@ -3,8 +3,11 @@ package win32
 import (
 	"fmt"
 	"image"
+	"log"
 	"math"
 	"runtime"
+	"runtime/debug"
+	"sync/atomic"
 	"syscall"
 	"unsafe"
 
@@ -19,6 +22,47 @@ import (
 
 	"github.com/goexlib/cgo"
 )
+
+var (
+	user32 = syscall.NewLazyDLL("user32.dll")
+	gdi32  = syscall.NewLazyDLL("gdi32.dll")
+	dwmapi = syscall.NewLazyDLL("dwmapi.dll")
+	// CreateRoundRectRgn 是 gdi32 的导出，user32 里没有这个名字。挂在 user32 上时
+	// Find() 恒返回"找不到过程"，非 Win11 的圆角就静默退成了方角。
+	procCreateRoundRectRgn = gdi32.NewProc("CreateRoundRectRgn")
+	procSetWindowRgn       = user32.NewProc("SetWindowRgn")
+	procDwmSetWindowAttr   = dwmapi.NewProc("DwmSetWindowAttribute")
+)
+
+const (
+	DWMWA_WINDOW_CORNER_PREFERENCE = 33
+	DWMWCP_ROUND                   = 2
+
+	// TrayMessage is the callback message gui.TrayIcon registers for tray
+	// notifications (WM_USER + 1).
+	TrayMessage = winapi.WM_USER + 1
+)
+
+// MessageHandler receives the native messages the higher layer claims: the
+// TrayMessage icon callback, and WM_DESTROY so a layer that keyed state to the
+// HWND can release it. Returning true consumes the message; WM_DESTROY always
+// continues regardless.
+type MessageHandler func(hwnd winapi.HWND, message winapi.UINT, wParam winapi.WPARAM, lParam winapi.LPARAM) bool
+
+// gui.TrayIcon installs the handler from whichever goroutine creates the first
+// icon, while WndProc reads it on the GUI thread that pumps the message, so the
+// pointer needs atomic access.
+var customMessage atomic.Pointer[MessageHandler]
+
+// SetMessageHandler installs (nil clears) the custom message handler. Only one
+// consumer may claim these messages at a time.
+func SetMessageHandler(handler MessageHandler) {
+	if handler == nil {
+		customMessage.Store(nil)
+		return
+	}
+	customMessage.Store(&handler)
+}
 
 type Window struct {
 	transparent       bool
@@ -52,6 +96,8 @@ type Window struct {
 	integrated        bool               // custom non-client calculation is installed, not a creation preference
 	frameExtended     bool               // last DWM frame-extension call succeeded
 	topBorder         winapi.LONG        // Integrated normal-state non-client top, in physical pixels
+	rounded           bool               // requests rounded corners (Windows 11+)
+	cornerRadius      float32            // corner radius in DIP; 0 uses system default
 }
 
 var _ common.DesktopWindow = (*Window)(nil)
@@ -84,12 +130,14 @@ func newWindow(size geometry.Size, onEvent events.EventHandler, options common.W
 		}
 	}
 	win := &Window{
-		onEvent:     onEvent,
-		scale:       1,
-		style:       winapi.WS_OVERLAPPEDWINDOW,
-		exStyle:     windowExStyle(options),
-		state:       common.WindowStateUnknown,
-		transparent: options.Transparent,
+		onEvent:      onEvent,
+		scale:        1,
+		style:        winapi.WS_OVERLAPPEDWINDOW,
+		exStyle:      windowExStyle(options),
+		state:        common.WindowStateUnknown,
+		transparent:  options.Transparent,
+		rounded:      options.Rounded,
+		cornerRadius: options.CornerRadius,
 	}
 	if options.Chrome == common.WindowChromeIntegrated {
 		win.topBorder = integratedTopBorder(build)
@@ -156,6 +204,15 @@ func newWindow(size geometry.Size, onEvent events.EventHandler, options common.W
 		}
 	}
 
+	// Rounded corners: Win11 goes through DWM, older Windows through a GDI region.
+	if win.rounded && win.hwnd != 0 {
+		radius := int(win.cornerRadius)
+		if radius <= 0 {
+			radius = 10 // system default
+		}
+		setWindowRounded(win.hwnd, radius, scale)
+	}
+
 	runtime.KeepAlive(win)
 	return win, nil
 }
@@ -170,8 +227,10 @@ func (w *Window) Destroy() {
 	}
 	w.releaseUpload()
 	w.hitTest = nil
-	if w.hwnd != 0 {
-		winapi.DestroyWindow(w.hwnd)
+	if w.hwnd != 0 && winapi.DestroyWindow(w.hwnd) == winapi.FALSE {
+		// A surviving HWND keeps the window object and its per-thread WndProc
+		// routing alive, and nothing left in the process can close it.
+		log.Printf("win32: DestroyWindow(%v) failed", uintptr(w.hwnd))
 	}
 }
 
@@ -336,6 +395,12 @@ func windowProc(hwnd winapi.HWND, message winapi.UINT, wParam winapi.WPARAM, lPa
 		return 0
 
 	case winapi.WM_DESTROY:
+		// Notify before tearing down local state: a layer that keyed resources to
+		// this HWND (gui.TrayIcon) must release them while the handle is still
+		// valid, or Shell keeps calling an HWND another window will reuse.
+		if handler := customMessage.Load(); handler != nil {
+			(*handler)(hwnd, message, 0, 0)
+		}
 		window.releaseUpload()
 		window.hitTest = nil
 		delete(windowMap, hwnd)
@@ -432,6 +497,14 @@ func windowProc(hwnd winapi.HWND, message winapi.UINT, wParam winapi.WPARAM, lPa
 				winapi.UpdateWindow(hwnd)
 			}
 		}
+		// Reapply rounded corners after size change to keep corners aligned.
+		if window.rounded && window.hwnd != 0 {
+			radius := int(window.cornerRadius)
+			if radius <= 0 {
+				radius = 10
+			}
+			setWindowRounded(window.hwnd, radius, scale)
+		}
 		return 0
 
 	case winapi.WM_ERASEBKGND:
@@ -442,8 +515,19 @@ func windowProc(hwnd winapi.HWND, message winapi.UINT, wParam winapi.WPARAM, lPa
 	case winapi.WM_PAINT:
 		var ps winapi.PAINTSTRUCT
 		winapi.BeginPaint(hwnd, &ps)
-		window.onEvent(events.PaintEvent{})
-		winapi.EndPaint(hwnd, &ps)
+		// EndPaint must run even when painting panics: without it the update
+		// region is never validated and the window repaint-loops. The recover
+		// drops the frame instead of killing the process (this runs on the
+		// NewCallback stack, where nothing else would catch it).
+		func() {
+			defer winapi.EndPaint(hwnd, &ps)
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("goui: paint panic recovered, frame dropped: %v\n%s", r, debug.Stack())
+				}
+			}()
+			window.onEvent(events.PaintEvent{})
+		}()
 		return 0
 
 	case winapi.WM_DPICHANGED:
@@ -600,6 +684,14 @@ func windowProc(hwnd winapi.HWND, message winapi.UINT, wParam winapi.WPARAM, lPa
 	case winapi.WM_IME_ENDCOMPOSITION:
 		if window.im != nil {
 			window.im.endComposition()
+			return 0
+		}
+
+	case TrayMessage:
+		// Tray icon callback (gui.TrayIcon's UCallbackMessage). The higher layer
+		// decides whether it owns this hwnd; unhandled messages fall through.
+		// Runs on the GUI thread that pumps this window's messages.
+		if handler := customMessage.Load(); handler != nil && (*handler)(hwnd, message, wParam, lParam) {
 			return 0
 		}
 	}
@@ -1382,4 +1474,67 @@ func (w *Window) WorkAreaAt(point geometry.Point) (geometry.Rectangle, error) {
 		return geometry.Rectangle{}, common.ErrUnavailable
 	}
 	return result, nil
+}
+
+// setWindowRounded 给窗口加圆角，两条路：
+//   - Windows 11 22H1+：DwmSetWindowAttribute(DWMWA_WINDOW_CORNER_PREFERENCE)。DWM 自己裁
+//     圆角，带抗锯齿也随系统主题；成功就直接返回，不能再叠 GDI 区域（两层都裁会互相错开）。
+//   - Win10 / Win7：这个属性还不存在，调用必失败（E_INVALIDARG），只剩
+//     CreateRoundRectRgn + SetWindowRgn。区域是二值的、没有 alpha，所以圆角是硬边（看得见锯齿）——
+//     这是这条路本身的代价，不是还没调对。
+//
+// radiusDip 是 DIP，区域坐标是物理像素，必须按 scale 换算；CreateRoundRectRgn 末两个参数是
+// 椭圆的宽和高（＝2×半径），直接传半径只会裁出想要的一半。
+// 尺寸不由调用者传：区域坐标的原点是窗口左上角，包含非客户区，所以只能量 GetWindowRect。
+// 客户区尺寸是另一个基准，两个调用点各用一套就会在第一次 WM_SIZE 后错开一整条标题栏。
+// 最大化时清空区域：Win10 把 maximized 窗口的边框推到屏幕外，按那个尺寸裁圆角会切掉可见内容，
+// 而且系统应用最大化本来就是方角。
+func setWindowRounded(hwnd winapi.HWND, radiusDip int, scale float32) {
+	if scale <= 0 {
+		scale = 1
+	}
+	cornerPreference := uint32(DWMWCP_ROUND)
+	ret, _, _ := procDwmSetWindowAttr.Call(
+		uintptr(hwnd),
+		DWMWA_WINDOW_CORNER_PREFERENCE,
+		uintptr(unsafe.Pointer(&cornerPreference)),
+		unsafe.Sizeof(cornerPreference),
+	)
+	// 返回值是 HRESULT。x64 调用约定下 syscall 只保证低 32 位有意义，不降位比较的话
+	// Win11 上的 S_OK 也可能被当成失败。
+	if uint32(ret) == 0 {
+		return
+	}
+	if winapi.IsZoomed(hwnd) != winapi.FALSE {
+		procSetWindowRgn.Call(uintptr(hwnd), 0, 1)
+		return
+	}
+	var outer winapi.RECT
+	if err := winapi.GetWindowRect(hwnd, &outer); err != nil {
+		return
+	}
+	width, height := int(outer.Right-outer.Left), int(outer.Bottom-outer.Top)
+	if width <= 0 || height <= 0 {
+		return
+	}
+	px := int(float32(radiusDip)*scale + 0.5)
+	if px < 1 {
+		px = 1
+	}
+	diameter := uintptr(2 * px)
+	rgn, _, _ := procCreateRoundRectRgn.Call(
+		0, 0,
+		uintptr(width+1), uintptr(height+1),
+		diameter, diameter,
+	)
+	if rgn == 0 {
+		return
+	}
+	// 返回 1 才是"成功且区域归窗口所有"，此后不能再 DeleteObject（窗口会自己替换）。
+	// 其余返回值按文档就是失败，区域仍归我们：拖一次边框来一堆 WM_SIZE，每次漏一个
+	// GDI 句柄会把进程的 10000 个对象额度耗尽，之后所有绘制一起失败。
+	if ret, _, _ := procSetWindowRgn.Call(uintptr(hwnd), rgn, 1); ret == 1 {
+		return
+	}
+	winapi.DeleteObject(winapi.HGDIOBJ(rgn))
 }

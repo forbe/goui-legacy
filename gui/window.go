@@ -55,6 +55,8 @@ type Window interface {
 	SetFocusedWidget(Widget) bool
 
 	Show() error
+	// Hide hides the window without destroying it. Unsupported platforms return ErrUnsupported.
+	Hide() error
 
 	// WorkAreaAt returns the work area containing point (or the nearest one),
 	// in this window's client-local DIP. Unsupported hosts return ErrUnsupported.
@@ -176,13 +178,20 @@ func newWindow(app *application, options WindowOptions) (*window, error) {
 	}
 
 	mode := options.Chrome
-	nativeOptions := platform.WindowOptions{Chrome: platform.WindowChrome(mode), Transparent: options.Transparent, SkipTaskbar: options.SkipTaskbar}
+	nativeOptions := platform.WindowOptions{
+		Chrome:       platform.WindowChrome(mode),
+		Transparent:  options.Transparent,
+		SkipTaskbar:  options.SkipTaskbar,
+		Rounded:      options.Rounded,
+		CornerRadius: options.CornerRadius,
+	}
 	platformWindow, err := app.platform.NewWindow(options.Size, win.onEvent, nativeOptions)
 	if mode == WindowChromeIntegrated && errors.Is(err, platform.ErrUnsupported) && platformWindow == nil &&
 		runtime.GOOS == "linux" && app.platform.Name() == "x11" {
 		// The platform deliberately does not claim native Integrated support.
 		// Only the GUI knows how to decorate a transparent, undecorated surface.
 		nativeOptions.Chrome, nativeOptions.Transparent = platform.WindowChromeNone, true
+		nativeOptions.Rounded, nativeOptions.CornerRadius = false, 0 // no rounded corners on X11 fallback
 		platformWindow, err = app.platform.NewWindow(options.Size, win.onEvent, nativeOptions)
 		if err == nil {
 			win.clientChrome, win.transparent = true, true
@@ -193,7 +202,13 @@ func newWindow(app *application, options WindowOptions) (*window, error) {
 	}
 	if mode == WindowChromeIntegrated && errors.Is(err, platform.ErrUnsupported) && platformWindow == nil {
 		mode = WindowChromeNative
-		nativeOptions = platform.WindowOptions{Chrome: platform.WindowChromeNative, Transparent: options.Transparent, SkipTaskbar: options.SkipTaskbar}
+		nativeOptions = platform.WindowOptions{
+			Chrome:      platform.WindowChromeNative,
+			Transparent: options.Transparent,
+			SkipTaskbar: options.SkipTaskbar,
+		}
+		// no rounded corners on Native fallback
+		nativeOptions.Rounded, nativeOptions.CornerRadius = false, 0
 		platformWindow, err = app.platform.NewWindow(options.Size, win.onEvent, nativeOptions)
 	}
 	win.surface = platformWindow
@@ -366,6 +381,13 @@ func (w *window) Show() error {
 		w.chrome.nativeChanged()
 	}
 	return err
+}
+
+func (w *window) Hide() error {
+	if w.platformWindow == nil {
+		return nil
+	}
+	return w.platformWindow.Hide()
 }
 
 func (w *window) RequestPaint() error {

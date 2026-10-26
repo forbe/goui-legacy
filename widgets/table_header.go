@@ -10,20 +10,33 @@ import (
 	"slices"
 )
 
+const tableHeaderTextStyle = "table-header-text"
+
 type tableHeader struct {
 	gui.WidgetBase
 	view           *TableView
 	column         *TableColumn
+	content        *gui.WidgetBase
 	label          *gui.Label
+	note           *gui.Label
 	handle         *tableResizeHandle
 	hover, pressed bool
 }
 
 func newTableHeader(v *TableView, c *TableColumn) *tableHeader {
-	h := &tableHeader{view: v, column: c, label: gui.NewLabel(c.title)}
-	h.label.SetStyleName("table-header-text")
+	h := &tableHeader{view: v, column: c, content: new(gui.WidgetBase)}
+	h.label = gui.NewLabel(c.title)
+	h.label.SetStyleName(tableHeaderTextStyle)
+	h.note = gui.NewLabel(c.note)
+	h.note.SetStyleName(headerNoteStyle(c))
+	h.note.SetVisible(c.note != "")
+	row := layout.NewLinearLayout(layout.DirectionHorizontal)
+	row.CrossAlign = layout.CrossBaseline
+	h.content.SetLayoutManager(row)
+	h.content.AddChild(h.content, h.label)
+	h.content.AddChild(h.content, h.note)
 	h.handle = newTableResizeHandle(h)
-	h.WidgetBase.AddChild(h, h.label)
+	h.WidgetBase.AddChild(h, h.content)
 	h.WidgetBase.AddChild(h, h.handle)
 	h.SetLayoutManager(&tableHeaderCellLayout{header: h})
 	motion := gui.NewMotionEventController()
@@ -50,6 +63,11 @@ func newTableHeader(v *TableView, c *TableColumn) *tableHeader {
 }
 func (h *tableHeader) update() {
 	h.label.SetText(h.column.title)
+	h.note.SetText(h.column.note)
+	if styleName := headerNoteStyle(h.column); h.note.StyleName() != styleName {
+		h.note.SetStyleName(styleName)
+	}
+	h.note.SetVisible(h.column.note != "")
 	h.SetFocusable(h.column.sortable)
 	h.handle.SetVisible(h.column.resizable)
 	if !h.column.resizable {
@@ -57,6 +75,13 @@ func (h *tableHeader) update() {
 	}
 	h.RequestLayout()
 	h.RequestPaint()
+}
+
+func headerNoteStyle(c *TableColumn) string {
+	if c.noteStyle == "" {
+		return tableHeaderTextStyle
+	}
+	return c.noteStyle
 }
 func (h *tableHeader) Paint(p gui.Painter) {
 	state := style.Normal

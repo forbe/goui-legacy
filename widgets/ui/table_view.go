@@ -15,6 +15,7 @@ import (
 // the imperative column and delegate across rebuilds of its owning TableView.
 type TableColumnView[T any] struct {
 	id, title                 string
+	note, noteStyle           string
 	cell                      func(widgets.TableRow, T) baseui.View
 	width, minWidth, maxWidth float32
 	resizable, sortable       bool
@@ -49,6 +50,13 @@ func (c *TableColumnView[T]) Resizable(enabled bool) *TableColumnView[T] {
 }
 func (c *TableColumnView[T]) Sortable(enabled bool) *TableColumnView[T] {
 	c.sortable = enabled
+	return c
+}
+
+// HeaderNote appends a secondary caption to the header title, drawn with its
+// own style name ("hint" for a smaller, muted line). Empty text removes it.
+func (c *TableColumnView[T]) HeaderNote(text, styleName string) *TableColumnView[T] {
+	c.note, c.noteStyle = text, styleName
 	return c
 }
 func (c *TableColumnView[T]) OnResize(fn func(float32)) *TableColumnView[T] {
@@ -230,6 +238,7 @@ func (v *TableViewView[T]) Update(ctx baseui.BuildContext, widget gui.Widget) {
 		c.handle.Block()
 		blocked = append(blocked, c.handle)
 		c.column.SetTitle(declaration.title)
+		c.column.SetHeaderNote(declaration.note, declaration.noteStyle)
 		c.column.SetMinWidth(declaration.minWidth)
 		c.column.SetMaxWidth(declaration.maxWidth)
 		c.column.SetResizable(declaration.resizable)

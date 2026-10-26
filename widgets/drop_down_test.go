@@ -11,6 +11,7 @@ import (
 	"github.com/golang-gui/goui/core/geometry"
 	"github.com/golang-gui/goui/gui"
 	"github.com/golang-gui/goui/layout"
+	"github.com/golang-gui/goui/platform"
 	"github.com/golang-gui/goui/platform/events"
 	"github.com/golang-gui/goui/platform/graphics"
 	"github.com/golang-gui/goui/platform/graphics/software"
@@ -21,6 +22,7 @@ import (
 type dropDownTestPopup struct {
 	gui.Popover
 	widget, focus gui.Widget
+	transparent   bool
 	visible       bool
 	err           error
 	dispatcher    gui.EventDispatcher
@@ -28,6 +30,7 @@ type dropDownTestPopup struct {
 
 func (p *dropDownTestPopup) Widget() gui.Widget { return p.widget }
 func (p *dropDownTestPopup) Visible() bool      { return p.visible }
+func (p *dropDownTestPopup) Transparent() bool  { return p.transparent }
 func (p *dropDownTestPopup) Show() error {
 	if p.Placement() != gui.PopoverPlacementBottom {
 		return errors.New("DropDown did not request Bottom placement")
@@ -341,6 +344,74 @@ func TestDropDownBrowseConfirmCancel(t *testing.T) {
 	p.key(t, events.KeyEnter, 0)
 	if d.Opened() || d.current != -1 || d.Selected() != -1 || calls != 1 {
 		t.Fatal("disabled popup input committed selection or failed to dismiss")
+	}
+}
+
+// 没有 DCompositionCreateDevice / DWM 合成的机器（Win7、关了合成的服务器）上
+// 透明弹层建不出来，下拉框必须改开不透明弹层，而不是让点击静默失效。
+func TestDropDownOpenFallsBackToOpaquePopup(t *testing.T) {
+	for _, capability := range []error{platform.ErrUnsupported, platform.ErrUnavailable} {
+		t.Run(fmt.Sprint(capability), func(t *testing.T) {
+			d := NewDropDown()
+			d.SetModel(gui.NewSliceListModel([]DropDownItem{{Text: "A"}, {Text: "B"}}))
+			d.SetDelegate(new(dropDownTestDelegate))
+			d.Measure(layout.Tight(geometry.Size{Width: 180, Height: 32}))
+			d.Arrange(geometry.Rect(0, 0, 180, 32))
+			defer d.SetModel(nil)
+
+			var made []*dropDownTestPopup
+			d.newPopup = func(transparent bool) gui.Popover {
+				p := &dropDownTestPopup{Popover: gui.NewPopover(d, nil), widget: d.content, transparent: transparent}
+				if transparent {
+					p.err = gui.NewPopoverCreationError(fmt.Errorf("transparent popup: %w", capability))
+				}
+				made = append(made, p)
+				return p
+			}
+			if err := d.Open(); err != nil {
+				t.Fatalf("open did not fall back: %v", err)
+			}
+			if len(made) != 2 || !made[0].transparent || made[1].transparent {
+				t.Fatalf("popup attempts: %d", len(made))
+			}
+			if !d.Opened() || d.popup != made[1] {
+				t.Fatal("opaque fallback is not the open popup")
+			}
+		})
+	}
+}
+
+func TestDropDownOpenKeepsErrorForOtherFailures(t *testing.T) {
+	d, _, _, _ := dropDownInput()
+	defer d.SetModel(nil)
+	made := 0
+	d.newPopup = func(transparent bool) gui.Popover {
+		made++
+		return &dropDownTestPopup{Popover: gui.NewPopover(d, nil), widget: d.content,
+			transparent: transparent, err: errors.New("boom")}
+	}
+	if err := d.Open(); err == nil {
+		t.Fatal("open swallowed a non-capability error")
+	}
+	if made != 1 {
+		t.Fatalf("unexpected fallback attempts: %d", made)
+	}
+
+	// 同一个能力错误若来自摆放查询而不是建弹层，换一套不透明弹层修不了它，
+	// 只会白丢一个原生 surface。
+	d2, _, _, _ := dropDownInput()
+	defer d2.SetModel(nil)
+	made = 0
+	d2.newPopup = func(transparent bool) gui.Popover {
+		made++
+		return &dropDownTestPopup{Popover: gui.NewPopover(d2, nil), widget: d2.content,
+			transparent: transparent, err: fmt.Errorf("placement query: %w", platform.ErrUnavailable)}
+	}
+	if err := d2.Open(); !errors.Is(err, platform.ErrUnavailable) {
+		t.Fatalf("open changed a show failure: %v", err)
+	}
+	if made != 1 {
+		t.Fatalf("unexpected fallback attempts: %d", made)
 	}
 }
 

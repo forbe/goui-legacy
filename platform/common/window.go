@@ -216,6 +216,9 @@ func (o WindowOptions) Validate() error {
 	if o.Chrome > WindowChromeNone {
 		return fmt.Errorf("invalid window chrome: %d", o.Chrome)
 	}
+	if o.Rounded && o.CornerRadius < 0 {
+		return fmt.Errorf("invalid corner radius: %v", o.CornerRadius)
+	}
 	return nil
 }
 
@@ -244,6 +247,11 @@ type WindowOptions struct {
 	// application-level Dock icon: this preference does not hide that icon or
 	// prevent native minimized-window tiles. It is not an observed state.
 	SkipTaskbar bool
+	// Rounded requests rounded corners for the window. Only effective on
+	// Windows 11 (build 22000+) with WindowChromeNone or WindowChromeIntegrated.
+	// The radius is in DIP units; 0 uses the system default (typically 8-10 DIP).
+	Rounded      bool
+	CornerRadius float32
 }
 
 // WindowHit identifies a native frame role, not a Widget action or pointer state.

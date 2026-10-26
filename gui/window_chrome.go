@@ -48,6 +48,10 @@ type WindowOptions struct {
 	// The window remains an ordinary, activatable window and counts toward the
 	// application's last-window-closed policy. This is creation-only.
 	SkipTaskbar bool
+	// Rounded requests rounded corners (Windows 11+ only). CornerRadius is in DIP;
+	// 0 uses the system default (typically 8-10 DIP). Creation-only setting.
+	Rounded      bool
+	CornerRadius float32
 }
 
 var defaultWindowOptions = WindowOptions{

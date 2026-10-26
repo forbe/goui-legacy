@@ -1,6 +1,7 @@
 package widgets
 
 import (
+	"errors"
 	"fmt"
 	"math"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/golang-gui/goui/core/signal"
 	"github.com/golang-gui/goui/gui"
 	"github.com/golang-gui/goui/layout"
+	"github.com/golang-gui/goui/platform"
 	"github.com/golang-gui/goui/platform/events"
 	"github.com/golang-gui/goui/platform/graphics"
 	"github.com/golang-gui/goui/style"
@@ -50,6 +52,7 @@ type DropDown struct {
 	selectedSignal             signal.Signal2[int, uint64]
 	openError                  signal.Signal2[error, uint64]
 	popup                      gui.Popover
+	newPopup                   func(transparent bool) gui.Popover // test seam; nil builds a gui popover
 	content                    *dropDownContent
 	motion                     *gui.MotionEventController
 	click                      *gui.ClickEventController
@@ -380,6 +383,25 @@ func (d *DropDown) Refresh() {
 
 func (d *DropDown) Opened() bool { return d.popup != nil && d.popup.Visible() }
 
+// replacePopup releases the current popover and builds one with the requested
+// transparency. The content widget survives the release and is adopted by the
+// new popover.
+func (d *DropDown) replacePopup(transparent bool) {
+	if d.popup != nil {
+		d.popup.Destroy()
+	}
+	if d.newPopup != nil {
+		d.popup = d.newPopup(transparent)
+	} else {
+		d.popup = gui.NewPopover(d, &gui.PopoverOptions{Transparent: transparent})
+	}
+	d.popup.SetStyleName("drop-down-popup")
+	d.popup.SetModal(true)
+	d.popup.ConnectDismissRequest(d.Close)
+	d.popup.ConnectClosed(func() { d.current = -1; d.RequestPaint() })
+	d.popup.SetWidget(d.content)
+}
+
 // Open lazily creates an owner-modal, no-native-focus Popover. Empty or fully
 // disabled lists and disabled controls are a no-op; an unmounted anchor fails.
 func (d *DropDown) Open() error {
@@ -403,19 +425,26 @@ func (d *DropDown) Open() error {
 		d.content = newDropDownContent(d)
 	}
 	if d.popup == nil {
-		d.popup = gui.NewPopover(d, &gui.PopoverOptions{Transparent: true})
-		d.popup.SetStyleName("drop-down-popup")
-		d.popup.SetModal(true)
-		d.popup.ConnectDismissRequest(d.Close)
-		d.popup.ConnectClosed(func() { d.current = -1; d.RequestPaint() })
-		d.popup.SetWidget(d.content)
+		d.replacePopup(true)
 	}
 	d.popup.SetPlacement(gui.PopoverPlacementBottom)
 	d.current = index
 	d.content.list.Refresh()
 	d.content.RequestLayout()
 	revision := d.revision
-	if err := d.popup.Show(); err != nil {
+	err := d.popup.Show()
+	// 没有 DWM 合成或 DCompositionCreateDevice（Win7、关了合成的服务器）时
+	// 透明弹层建不出来；退到不透明弹层，别让整个下拉变成点不动的死控件。
+	// 只有"原生弹层建不出来"才值得换一套不透明的重弹。摆放查询也会报
+	// ErrUnavailable，为那种失败重建既没修任何东西，还白丢一个原生 surface。
+	var creation *gui.PopoverCreationError
+	if d.popup.Transparent() && errors.As(err, &creation) &&
+		(errors.Is(err, platform.ErrUnsupported) || errors.Is(err, platform.ErrUnavailable)) {
+		d.replacePopup(false)
+		d.popup.SetPlacement(gui.PopoverPlacementBottom)
+		err = d.popup.Show()
+	}
+	if err != nil {
 		d.Close()
 		return err
 	}
