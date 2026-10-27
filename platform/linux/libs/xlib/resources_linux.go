@@ -3,7 +3,7 @@ package xlib
 import (
 	"runtime"
 
-	"github.com/goexlib/cgo"
+	"github.com/golang-gui/goui/internal/cgo"
 )
 
 var (

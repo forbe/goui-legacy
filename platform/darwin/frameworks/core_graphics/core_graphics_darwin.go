@@ -4,7 +4,7 @@ import (
 	. "github.com/golang-gui/goui/platform/darwin/frameworks/core_foundation"
 	"github.com/golang-gui/goui/platform/darwin/frameworks/utils"
 
-	"github.com/goexlib/cgo"
+	"github.com/golang-gui/goui/internal/cgo"
 )
 
 var framework utils.Framework

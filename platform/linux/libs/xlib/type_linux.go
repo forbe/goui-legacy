@@ -3,7 +3,7 @@ package xlib
 import (
 	"unsafe"
 
-	"github.com/goexlib/cgo"
+	"github.com/golang-gui/goui/internal/cgo"
 )
 
 type ID uintptr

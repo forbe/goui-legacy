@@ -1154,9 +1154,24 @@ func (p *Painter) setLinearGradient(gradient graphics.LinearGradient) bool {
 			p.linearStops = nil
 		}
 
-		stops := [2]d2d1.GradientStop{
-			{Position: 0, Color: d2dColor(gradient.StartColor)},
-			{Position: 1, Color: d2dColor(gradient.EndColor)},
+		// D2D 把渐变 stop 当作 straight 颜色线性插值，合成时再乘插值后的 alpha
+		// （out = lerp(color) * lerp(alpha)），因此两端两个 stop 无法表达
+		// graphics.LinearGradient 承诺的预乘端点插值（software/OpenGL 后端都是
+		// 预乘插值）。把渐变带细分：每个 stop 处的输出恰好等于该位置的预乘
+		// 插值结果；stop 之间的残余弯曲在该密度下不超过约一个 8-bit 台阶。
+		const rampStops = 9
+		stops := make([]d2d1.GradientStop, rampStops)
+		for i := range stops {
+			t := float32(i) / (rampStops - 1)
+			stops[i] = d2d1.GradientStop{
+				Position: t,
+				Color: d2dColor(graphics.Color{
+					R: gradient.StartColor.R + (gradient.EndColor.R-gradient.StartColor.R)*t,
+					G: gradient.StartColor.G + (gradient.EndColor.G-gradient.StartColor.G)*t,
+					B: gradient.StartColor.B + (gradient.EndColor.B-gradient.StartColor.B)*t,
+					A: gradient.StartColor.A + (gradient.EndColor.A-gradient.StartColor.A)*t,
+				}),
+			}
 		}
 		var hr com.HRESULT
 		p.linearStops, hr = p.render.CreateGradientStopCollection(stops[:], d2d1.D2D1_GAMMA_2_2, d2d1.D2D1_EXTEND_MODE_CLAMP)

@@ -1,7 +1,7 @@
 package x11
 
 import (
-	"github.com/goexlib/cgo"
+	"github.com/golang-gui/goui/internal/cgo"
 	"github.com/golang-gui/goui/platform/linux/libs/xlib"
 	"github.com/golang-gui/goui/platform/linux/libs/xsync"
 )

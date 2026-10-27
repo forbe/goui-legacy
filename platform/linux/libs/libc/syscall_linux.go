@@ -3,7 +3,7 @@ package libc
 import (
 	"syscall"
 
-	"github.com/goexlib/cgo"
+	"github.com/golang-gui/goui/internal/cgo"
 )
 
 const (

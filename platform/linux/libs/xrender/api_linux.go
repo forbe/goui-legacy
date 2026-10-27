@@ -1,7 +1,7 @@
 package xrender
 
 import (
-	"github.com/goexlib/cgo"
+	"github.com/golang-gui/goui/internal/cgo"
 	"github.com/golang-gui/goui/platform/linux/libs/xlib"
 )
 

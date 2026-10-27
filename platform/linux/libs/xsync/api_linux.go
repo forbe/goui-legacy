@@ -5,7 +5,7 @@ import (
 
 	"github.com/golang-gui/goui/platform/linux/libs/xlib"
 
-	"github.com/goexlib/cgo"
+	"github.com/golang-gui/goui/internal/cgo"
 )
 
 var (

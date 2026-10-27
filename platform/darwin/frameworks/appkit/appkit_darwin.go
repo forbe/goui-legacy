@@ -10,7 +10,7 @@ import (
 	"github.com/golang-gui/goui/platform/darwin/frameworks/utils"
 
 	"github.com/ebitengine/purego/objc"
-	"github.com/goexlib/cgo"
+	"github.com/golang-gui/goui/internal/cgo"
 )
 
 var framework utils.Framework

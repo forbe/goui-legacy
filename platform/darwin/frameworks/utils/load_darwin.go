@@ -3,7 +3,7 @@ package utils
 import (
 	"fmt"
 	"github.com/ebitengine/purego"
-	"github.com/goexlib/cgo"
+	"github.com/golang-gui/goui/internal/cgo"
 )
 
 type Framework uintptr

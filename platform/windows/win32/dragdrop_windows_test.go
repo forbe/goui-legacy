@@ -52,6 +52,45 @@ func TestOLEFeedbackPreservesAcceptedAndCanceledNativeCursors(t *testing.T) {
 	}
 }
 
+func TestOLECallbackHandleLifecycle(t *testing.T) {
+	check := func(name string, got, want uintptr) {
+		t.Helper()
+		if got != want {
+			t.Fatalf("%s = %d, want %d", name, got, want)
+		}
+	}
+
+	target := newOLEDropTarget(nil)
+	targetHandle := uintptr(unsafe.Pointer(target))
+	check("target AddRef", oleTargetAddRef(targetHandle), 2)
+	check("target Release", oleTargetRelease(targetHandle), 1)
+	check("target final Release", oleTargetRelease(targetHandle), 0)
+	check("stale target AddRef", oleTargetAddRef(targetHandle), 0)
+	check("stale target Release", oleTargetRelease(targetHandle), 0)
+	oleTargetLeave(targetHandle)
+	runtime.KeepAlive(target)
+
+	data := newOLEDataObject(map[uint16][]byte{})
+	dataHandle := uintptr(unsafe.Pointer(data))
+	check("data AddRef", oleDataAddRef(dataHandle), 2)
+	check("data Release", oleDataRelease(dataHandle), 1)
+	check("data final Release", oleDataRelease(dataHandle), 0)
+	check("stale data AddRef", oleDataAddRef(dataHandle), 0)
+	check("stale data Release", oleDataRelease(dataHandle), 0)
+	runtime.KeepAlive(data)
+
+	source := newOLESourceObject(nil)
+	sourceHandle := uintptr(unsafe.Pointer(source))
+	check("source AddRef", oleSourceAddRef(sourceHandle), 2)
+	check("source Release", oleSourceRelease(sourceHandle), 1)
+	check("source final Release", oleSourceRelease(sourceHandle), 0)
+	check("stale source AddRef", oleSourceAddRef(sourceHandle), 0)
+	check("stale source Release", oleSourceRelease(sourceHandle), 0)
+	check("stale source QueryContinue", oleSourceQueryContinue(sourceHandle, 0, 0), oleResult(com.DRAGDROP_S_CANCEL))
+	check("stale source GiveFeedback", oleSourceFeedback(sourceHandle, 0), oleResult(com.DRAGDROP_S_USEDEFAULTCURSORS))
+	runtime.KeepAlive(source)
+}
+
 func TestOLEFeedbackOperationBits(t *testing.T) {
 	// Explorer's rejected desktop target may add DROPEFFECT_SCROLL alone.
 	// It must not suppress NeutralOutsideTargets, nor be interpreted as acceptance.
@@ -150,11 +189,11 @@ func TestOLEDragDataObjectAndFileMediumHeadless(t *testing.T) {
 			t.Fatalf("text = %q present=%t", text, ok)
 		}
 	}
-	var enumerator uintptr
-	if result := oleDataEnumFormatEtc(uintptr(unsafe.Pointer(obj)), uintptr(com.DataDirGet), uintptr(unsafe.Pointer(&enumerator))); result != 0 || enumerator == 0 {
+	var enumerator unsafe.Pointer
+	if result := oleDataEnumFormatEtc(uintptr(unsafe.Pointer(obj)), uintptr(com.DataDirGet), &enumerator); result != 0 || enumerator == nil {
 		t.Fatalf("EnumFormatEtc result=%x ptr=%x", result, enumerator)
 	}
-	(*com.Unknown)(unsafe.Pointer(enumerator)).Release()
+	(*com.Unknown)(enumerator).Release()
 }
 
 func TestOLEURIListRoundTripHeadless(t *testing.T) {

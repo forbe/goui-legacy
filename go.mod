@@ -5,7 +5,6 @@ go 1.24
 require (
 	github.com/ebitengine/purego v0.10.0
 	github.com/go-text/typesetting v0.3.5
-	github.com/goexlib/cgo v0.1.0
 	github.com/goexlib/mathx v0.0.1
 	github.com/golang-gui/nanovgo v0.0.8
 	github.com/golang-gui/oksvg v0.0.0-20260918033125-75e7ce872d46
@@ -22,6 +21,7 @@ require (
 
 require (
 	github.com/akavel/rsrc v0.10.2 // indirect
+	github.com/goexlib/cgo v0.1.0 // indirect
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect

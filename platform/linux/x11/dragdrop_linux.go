@@ -21,7 +21,7 @@ import (
 	"github.com/golang-gui/goui/platform/linux/libs/xshape"
 	xdraw "golang.org/x/image/draw"
 
-	"github.com/goexlib/cgo"
+	"github.com/golang-gui/goui/internal/cgo"
 )
 
 // dragService is one native XDND capability per X11 surface.

@@ -20,7 +20,7 @@ import (
 	"github.com/golang-gui/goui/platform/windows/sdk/dcomp"
 	"github.com/golang-gui/goui/platform/windows/sdk/winapi"
 
-	"github.com/goexlib/cgo"
+	"github.com/golang-gui/goui/internal/cgo"
 )
 
 var (
@@ -750,7 +750,10 @@ func windowStyle(options common.WindowOptions, build uint32) winapi.DWORD {
 	switch options.Chrome {
 	case common.WindowChromeIntegrated:
 		if build >= windows11Build {
-			return winapi.WS_OVERLAPPED | winapi.WS_THICKFRAME | winapi.WS_MAXIMIZEBOX
+			// Windows 11 keeps the native caption style (DWM rounded corners, snap
+			// layouts) and removes the whole caption height in WM_NCCALCSIZE
+			// instead; integratedTopBorder returns 0 there.
+			return winapi.WS_OVERLAPPEDWINDOW
 		}
 		return winapi.WS_POPUP | winapi.WS_THICKFRAME | winapi.WS_MAXIMIZEBOX
 	case common.WindowChromeNone:

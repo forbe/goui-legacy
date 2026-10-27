@@ -15,8 +15,8 @@ import (
 	"unicode/utf16"
 	"unsafe"
 
-	"github.com/goexlib/cgo"
 	"github.com/golang-gui/goui/core/geometry"
+	"github.com/golang-gui/goui/internal/cgo"
 	"github.com/golang-gui/goui/platform/common"
 	"github.com/golang-gui/goui/platform/dragdrop"
 	"github.com/golang-gui/goui/platform/events"
@@ -84,6 +84,12 @@ var oleDropTargetRoots sync.Map // uintptr -> *oleDropTarget, until final COM Re
 var nextOLEOfferID uint64
 
 func oleResult(hr com.HRESULT) uintptr { return uintptr(uint32(hr)) }
+
+func oleDropTargetAt(this uintptr) *oleDropTarget {
+	value, _ := oleDropTargetRoots.Load(this)
+	target, _ := value.(*oleDropTarget)
+	return target
+}
 
 func newDragService(surface common.Surface) (common.DragDrop, error) {
 	var w *Window
@@ -209,27 +215,36 @@ func (t *oleDropTarget) releaseRef() uint32 {
 	return uint32(count)
 }
 
-func oleTargetQueryInterface(this, iid, out uintptr) uintptr {
-	if out == 0 || iid == 0 {
+func oleTargetQueryInterface(this uintptr, iid *com.IID, out *uintptr) uintptr {
+	if out == nil || iid == nil {
 		return oleResult(com.E_INVALIDARG)
 	}
-	*(*uintptr)(unsafe.Pointer(out)) = 0
-	requested := *(*com.IID)(unsafe.Pointer(iid))
+	*out = 0
+	requested := *iid
 	if requested != com.IID_IUnknown && requested != com.IID_IDropTarget {
 		return oleResult(com.E_NOINTERFACE)
 	}
-	*(*uintptr)(unsafe.Pointer(out)) = this
-	t := (*oleDropTarget)(unsafe.Pointer(this))
+	t := oleDropTargetAt(this)
+	if t == nil {
+		return oleResult(com.E_INVALIDARG)
+	}
+	*out = this
 	t.refs.Add(1)
 	return 0
 }
 
 func oleTargetAddRef(this uintptr) uintptr {
-	return uintptr((*oleDropTarget)(unsafe.Pointer(this)).refs.Add(1))
+	if t := oleDropTargetAt(this); t != nil {
+		return uintptr(t.refs.Add(1))
+	}
+	return 0
 }
 
 func oleTargetRelease(this uintptr) uintptr {
-	return uintptr((*oleDropTarget)(unsafe.Pointer(this)).releaseRef())
+	if t := oleDropTargetAt(this); t != nil {
+		return uintptr(t.releaseRef())
+	}
+	return 0
 }
 
 func oleTargetEnter(t *oleDropTarget, object *com.DataObject, keyState uint32, point winapi.POINT, effect *uint32) com.HRESULT {
@@ -249,8 +264,8 @@ func oleTargetOver(t *oleDropTarget, keyState uint32, point winapi.POINT, effect
 }
 
 func oleTargetLeave(this uintptr) uintptr {
-	if service := (*oleDropTarget)(unsafe.Pointer(this)).service; service != nil {
-		service.leave()
+	if target := oleDropTargetAt(this); target != nil && target.service != nil {
+		target.service.leave()
 	}
 	return 0
 }
@@ -695,6 +710,18 @@ var oleSourceTable = oleSourceVTable{
 var oleSourceRoots sync.Map
 var activeOLESource *oleSourceSession // one OLE modal source on the GUI STA
 
+func oleDataObjectAt(this uintptr) *oleDataObject {
+	value, _ := oleSourceRoots.Load(this)
+	object, _ := value.(*oleDataObject)
+	return object
+}
+
+func oleSourceObjectAt(this uintptr) *oleSourceObject {
+	value, _ := oleSourceRoots.Load(this)
+	object, _ := value.(*oleSourceObject)
+	return object
+}
+
 func (d *oleDragService) Begin(id uint64, data *dragdrop.Data, actions dragdrop.Action, preview dragdrop.Preview, feedback dragdrop.Feedback) error {
 	if d.destroyed || d.window == nil || d.window.hwnd == 0 || d.source != nil || activeOLESource != nil {
 		return common.ErrUnavailable
@@ -886,36 +913,48 @@ func (s *oleSourceObject) releaseRef() uint32 {
 	return uint32(count)
 }
 
-func oleDataQueryInterface(this, iid, out uintptr) uintptr {
-	if iid == 0 || out == 0 {
+func oleDataQueryInterface(this uintptr, iid *com.IID, out *uintptr) uintptr {
+	if iid == nil || out == nil {
 		return oleResult(com.E_INVALIDARG)
 	}
-	*(*uintptr)(unsafe.Pointer(out)) = 0
-	want := *(*com.IID)(unsafe.Pointer(iid))
+	*out = 0
+	want := *iid
 	if want != com.IID_IUnknown && want != com.IID_IDataObject {
 		return oleResult(com.E_NOINTERFACE)
 	}
-	*(*uintptr)(unsafe.Pointer(out)) = this
-	(*oleDataObject)(unsafe.Pointer(this)).refs.Add(1)
+	d := oleDataObjectAt(this)
+	if d == nil {
+		return oleResult(com.E_INVALIDARG)
+	}
+	*out = this
+	d.refs.Add(1)
 	return 0
 }
 
 func oleDataAddRef(this uintptr) uintptr {
-	return uintptr((*oleDataObject)(unsafe.Pointer(this)).refs.Add(1))
+	if d := oleDataObjectAt(this); d != nil {
+		return uintptr(d.refs.Add(1))
+	}
+	return 0
 }
 func oleDataRelease(this uintptr) uintptr {
-	return uintptr((*oleDataObject)(unsafe.Pointer(this)).releaseRef())
+	if d := oleDataObjectAt(this); d != nil {
+		return uintptr(d.releaseRef())
+	}
+	return 0
 }
 
-func oleDataQueryGetData(this, formatPtr uintptr) uintptr {
-	if formatPtr == 0 {
+func oleDataQueryGetData(this uintptr, format *com.FormatEtc) uintptr {
+	if format == nil {
 		return oleResult(com.E_INVALIDARG)
 	}
-	format := (*com.FormatEtc)(unsafe.Pointer(formatPtr))
+	d := oleDataObjectAt(this)
+	if d == nil {
+		return oleResult(com.E_INVALIDARG)
+	}
 	if format.Aspect != com.DVAspectContent || format.Index != -1 {
 		return oleResult(com.DV_E_TYMED)
 	}
-	d := (*oleDataObject)(unsafe.Pointer(this))
 	if medium, exists := d.streams[format.Format]; exists {
 		if format.Tymed&medium.Tymed != 0 {
 			return 0
@@ -931,22 +970,21 @@ func oleDataQueryGetData(this, formatPtr uintptr) uintptr {
 	return 0
 }
 
-func oleDataGetData(this, formatPtr, mediumPtr uintptr) uintptr {
-	if mediumPtr == 0 {
+func oleDataGetData(this uintptr, format *com.FormatEtc, medium *com.StgMedium) uintptr {
+	if medium == nil {
 		return oleResult(com.E_INVALIDARG)
 	}
-	if result := oleDataQueryGetData(this, formatPtr); result != 0 {
+	if result := oleDataQueryGetData(this, format); result != 0 {
 		return result
 	}
-	format := (*com.FormatEtc)(unsafe.Pointer(formatPtr))
-	d := (*oleDataObject)(unsafe.Pointer(this))
-	if medium, exists := d.streams[format.Format]; exists {
-		if medium.ReleaseUnknown != nil {
-			(*com.Unknown)(medium.ReleaseUnknown).AddRef()
+	d := oleDataObjectAt(this)
+	if stream, exists := d.streams[format.Format]; exists {
+		if stream.ReleaseUnknown != nil {
+			(*com.Unknown)(stream.ReleaseUnknown).AddRef()
 		} else {
-			(*com.Unknown)(unsafe.Pointer(medium.Handle)).AddRef()
+			(*com.Unknown)(unsafe.Pointer(stream.Handle)).AddRef()
 		}
-		*(*com.StgMedium)(unsafe.Pointer(mediumPtr)) = medium
+		*medium = stream
 		return 0
 	}
 	data := d.wire[format.Format]
@@ -965,22 +1003,23 @@ func oleDataGetData(this, formatPtr, mediumPtr uintptr) uintptr {
 	}
 	copy(unsafe.Slice((*byte)(ptr), size), data)
 	winapi.GlobalUnlock(mem)
-	*(*com.StgMedium)(unsafe.Pointer(mediumPtr)) = com.StgMedium{Tymed: com.TymedHGlobal, Handle: uintptr(mem)}
+	*medium = com.StgMedium{Tymed: com.TymedHGlobal, Handle: uintptr(mem)}
 	return 0
 }
 
 func oleDataGetDataHere(_, _, _ uintptr) uintptr           { return oleResult(com.E_NOTIMPL) }
 func oleDataGetCanonicalFormatEtc(_, _, _ uintptr) uintptr { return oleResult(com.E_NOTIMPL) }
-func oleDataSetData(this, formatPtr, mediumPtr, release uintptr) uintptr {
-	if this == 0 || formatPtr == 0 || mediumPtr == 0 {
+func oleDataSetData(this uintptr, format *com.FormatEtc, medium *com.StgMedium, release uintptr) uintptr {
+	if this == 0 || format == nil || medium == nil {
 		return oleResult(com.E_INVALIDARG)
 	}
-	format := (*com.FormatEtc)(unsafe.Pointer(formatPtr))
-	medium := (*com.StgMedium)(unsafe.Pointer(mediumPtr))
 	if format.Aspect != com.DVAspectContent || format.Index != -1 || format.Tymed&medium.Tymed == 0 || medium.Handle == 0 {
 		return oleResult(com.DV_E_TYMED)
 	}
-	d := (*oleDataObject)(unsafe.Pointer(this))
+	d := oleDataObjectAt(this)
+	if d == nil {
+		return oleResult(com.E_INVALIDARG)
+	}
 	switch medium.Tymed {
 	case com.TymedHGlobal:
 		value, err := readOLEBytes(medium.Handle)
@@ -1017,19 +1056,23 @@ func oleDataSetData(this, formatPtr, mediumPtr, release uintptr) uintptr {
 	return 0
 }
 
-func oleDataEnumFormatEtc(this, direction, out uintptr) uintptr {
-	if out == 0 {
+func oleDataEnumFormatEtc(this, direction uintptr, out *unsafe.Pointer) uintptr {
+	if out == nil {
 		return oleResult(com.E_INVALIDARG)
 	}
-	*(*uintptr)(unsafe.Pointer(out)) = 0
+	*out = nil
 	if direction != uintptr(com.DataDirGet) {
 		return oleResult(com.E_NOTIMPL)
 	}
+	d := oleDataObjectAt(this)
+	if d == nil {
+		return oleResult(com.E_INVALIDARG)
+	}
 	formats := make([]com.FormatEtc, 0)
-	for id := range (*oleDataObject)(unsafe.Pointer(this)).wire {
+	for id := range d.wire {
 		formats = append(formats, com.FormatEtc{Format: id, Aspect: com.DVAspectContent, Index: -1, Tymed: com.TymedHGlobal})
 	}
-	for id := range (*oleDataObject)(unsafe.Pointer(this)).streams {
+	for id := range d.streams {
 		formats = append(formats, com.FormatEtc{Format: id, Aspect: com.DVAspectContent, Index: -1, Tymed: com.TymedIStream})
 	}
 	slices.SortFunc(formats, func(a, b com.FormatEtc) int { return int(a.Format) - int(b.Format) })
@@ -1038,7 +1081,7 @@ func oleDataEnumFormatEtc(this, direction, out uintptr) uintptr {
 	if hr.Failed() {
 		return oleResult(hr)
 	}
-	*(*uintptr)(unsafe.Pointer(out)) = uintptr(enumerator)
+	*out = enumerator
 	return 0
 }
 
@@ -1046,29 +1089,42 @@ func oleDataDAdvise(_, _, _, _, _ uintptr) uintptr { return oleResult(com.E_NOTI
 func oleDataDUnadvise(_, _ uintptr) uintptr        { return oleResult(com.E_NOTIMPL) }
 func oleDataEnumDAdvise(_, _ uintptr) uintptr      { return oleResult(com.E_NOTIMPL) }
 
-func oleSourceQueryInterface(this, iid, out uintptr) uintptr {
-	if iid == 0 || out == 0 {
+func oleSourceQueryInterface(this uintptr, iid *com.IID, out *uintptr) uintptr {
+	if iid == nil || out == nil {
 		return oleResult(com.E_INVALIDARG)
 	}
-	*(*uintptr)(unsafe.Pointer(out)) = 0
-	want := *(*com.IID)(unsafe.Pointer(iid))
+	*out = 0
+	want := *iid
 	if want != com.IID_IUnknown && want != com.IID_IDropSource {
 		return oleResult(com.E_NOINTERFACE)
 	}
-	*(*uintptr)(unsafe.Pointer(out)) = this
-	(*oleSourceObject)(unsafe.Pointer(this)).refs.Add(1)
+	s := oleSourceObjectAt(this)
+	if s == nil {
+		return oleResult(com.E_INVALIDARG)
+	}
+	*out = this
+	s.refs.Add(1)
 	return 0
 }
 
 func oleSourceAddRef(this uintptr) uintptr {
-	return uintptr((*oleSourceObject)(unsafe.Pointer(this)).refs.Add(1))
+	if s := oleSourceObjectAt(this); s != nil {
+		return uintptr(s.refs.Add(1))
+	}
+	return 0
 }
 func oleSourceRelease(this uintptr) uintptr {
-	return uintptr((*oleSourceObject)(unsafe.Pointer(this)).releaseRef())
+	if s := oleSourceObjectAt(this); s != nil {
+		return uintptr(s.releaseRef())
+	}
+	return 0
 }
 
 func oleSourceQueryContinue(this, escape, keyState uintptr) uintptr {
-	session := (*oleSourceObject)(unsafe.Pointer(this)).session
+	var session *oleSourceSession
+	if source := oleSourceObjectAt(this); source != nil {
+		session = source.session
+	}
 	if session == nil || session.cancelRequested || escape != 0 {
 		return oleResult(com.DRAGDROP_S_CANCEL)
 	}
@@ -1091,7 +1147,10 @@ func oleSourceQueryContinue(this, escape, keyState uintptr) uintptr {
 }
 
 func oleSourceFeedback(this, effect uintptr) uintptr {
-	session := (*oleSourceObject)(unsafe.Pointer(this)).session
+	var session *oleSourceSession
+	if source := oleSourceObjectAt(this); source != nil {
+		session = source.session
+	}
 	// DROPEFFECT_SCROLL is advisory, not an accepted operation. Explorer can
 	// return it by itself; compare the operation bits, not the raw DWORD.
 	if session != nil && session.feedback.NeutralOutsideTargets && oleActions(uint32(effect)) == 0 && !session.cancelRequested {

@@ -3,7 +3,7 @@ package directwrite
 import (
 	"bytes"
 	"errors"
-	"github.com/goexlib/cgo"
+	"github.com/golang-gui/goui/internal/cgo"
 	"github.com/golang-gui/goui/platform/windows/sdk/com"
 	"image/color"
 	"image/png"

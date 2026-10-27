@@ -19,7 +19,7 @@ import (
 	"github.com/golang-gui/goui/platform/linux/libs/pango"
 	"github.com/golang-gui/goui/platform/linux/libs/pango_cairo"
 
-	"github.com/goexlib/cgo"
+	"github.com/golang-gui/goui/internal/cgo"
 )
 
 type Context struct {

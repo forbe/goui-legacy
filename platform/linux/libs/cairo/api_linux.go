@@ -1,6 +1,6 @@
 package cairo
 
-import "github.com/goexlib/cgo"
+import "github.com/golang-gui/goui/internal/cgo"
 
 var (
 	libcairo = cgo.NewLazyLibrary("libcairo.so.2")

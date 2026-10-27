@@ -1,7 +1,7 @@
 package pango_cairo
 
 import (
-	"github.com/goexlib/cgo"
+	"github.com/golang-gui/goui/internal/cgo"
 	"github.com/golang-gui/goui/platform/linux/libs/cairo"
 	"github.com/golang-gui/goui/platform/linux/libs/pango"
 )

@@ -3,7 +3,7 @@ package xrandr
 import (
 	"runtime"
 
-	"github.com/goexlib/cgo"
+	"github.com/golang-gui/goui/internal/cgo"
 	"github.com/golang-gui/goui/platform/linux/libs/xlib"
 )
 

@@ -3,7 +3,7 @@ package utils
 import (
 	"image/color"
 
-	"github.com/goexlib/cgo"
+	"github.com/golang-gui/goui/internal/cgo"
 	"github.com/golang-gui/goui/platform/typography"
 )
 

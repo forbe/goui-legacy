@@ -9,7 +9,7 @@ import (
 	"github.com/golang-gui/goui/platform/common"
 	"github.com/golang-gui/goui/platform/linux/libs/xlib"
 
-	"github.com/goexlib/cgo"
+	"github.com/golang-gui/goui/internal/cgo"
 )
 
 // clipboard implements the X11 CLIPBOARD selection. Its owner window

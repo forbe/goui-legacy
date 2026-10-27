@@ -3,7 +3,7 @@ package coretext
 import (
 	"errors"
 	"fmt"
-	"github.com/goexlib/cgo"
+	"github.com/golang-gui/goui/internal/cgo"
 	"image/color"
 	"math"
 	"path/filepath"
