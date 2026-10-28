@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"image"
 	"log"
+	"os"
 	"sync"
+	"time"
 	"unsafe"
 
 	"github.com/golang-gui/goui/core/geometry"
@@ -22,6 +24,25 @@ import (
 	"github.com/golang-gui/goui/platform/windows/sdk/dxgi"
 	"github.com/golang-gui/goui/platform/windows/sdk/winapi"
 )
+
+// ---- 诊断设施：GOUI_D2D_TRACE=1 时向 stderr 输出 D2D 关键生命周期 ----
+
+var d2dTraceOn = os.Getenv("GOUI_D2D_TRACE") == "1"
+
+func d2dTrace(format string, args ...any) {
+	if !d2dTraceOn {
+		return
+	}
+	fmt.Fprintf(os.Stderr, "[d2d %s] ", time.Now().Format("15:04:05.000"))
+	fmt.Fprintf(os.Stderr, format+"\n", args...)
+}
+
+// comVtableAlive 探测 COM 实例是否悬垂。包装指针即实例地址，首 QWORD 是
+// vtable 指针；对象释放后若内存被清零则读到 0。读取本身与后续 CallRaw 的
+// 首步解引用等价，不引入新的崩溃面。
+func comVtableAlive(instance unsafe.Pointer) bool {
+	return instance != nil && *(*uintptr)(instance) != 0
+}
 
 type Painter struct {
 	hwnd         uintptr
@@ -121,6 +142,7 @@ func (p *Painter) createDeviceResources() (err error) {
 	if p.destroyed {
 		panic("direct2d: use painter after Destroy")
 	}
+	d2dTrace("createDeviceResources enter")
 	levels := []d3d11.FeatureLevel{
 		d3d11.D3D_FEATURE_LEVEL_11_1,
 		d3d11.D3D_FEATURE_LEVEL_11_0,
@@ -163,10 +185,12 @@ func (p *Painter) createDeviceResources() (err error) {
 	log.Printf("direct2d: driver=%v feature-level=%v transparent=%v", used, featureLevel, p.transparent)
 
 	var unknown *com.Unknown
-	if hr = p.d3dDevice.QueryInterface(dxgi.IID_IDXGIDevice, &unknown); hr.Failed() {
+	unknownOut := new(*com.Unknown)
+	if hr = p.d3dDevice.QueryInterface(dxgi.IID_IDXGIDevice, unknownOut); hr.Failed() {
 		p.releaseDeviceResources()
 		return fmt.Errorf("query IDXGIDevice: %v", hr)
 	}
+	unknown = *unknownOut
 	p.dxgiDevice = (*dxgi.Device)(unsafe.Pointer(unknown))
 	p.d2dDevice, hr = p.factory.CreateDevice(p.dxgiDevice)
 	if hr.Failed() || p.d2dDevice == nil {
@@ -191,10 +215,12 @@ func (p *Painter) createDeviceResources() (err error) {
 	}
 	defer adapter.Release()
 	unknown = nil
-	if hr = adapter.GetParent(dxgi.IID_IDXGIFactory2, &unknown); hr.Failed() {
+	factoryOut := new(*com.Unknown)
+	if hr = adapter.GetParent(dxgi.IID_IDXGIFactory2, factoryOut); hr.Failed() {
 		p.releaseDeviceResources()
 		return fmt.Errorf("get IDXGIFactory2: %v", hr)
 	}
+	unknown = *factoryOut
 	dxgiFactory := (*dxgi.Factory2)(unsafe.Pointer(unknown))
 	defer dxgiFactory.Release()
 	var frameLatencyErr error
@@ -259,6 +285,7 @@ func (p *Painter) createDeviceResources() (err error) {
 		p.releaseDeviceResources()
 		return fmt.Errorf("create Direct2D shadow effect: %v", hr)
 	}
+	d2dTrace("createDeviceResources ok rt=%#x", uintptr(unsafe.Pointer(p.render)))
 	return nil
 }
 
@@ -297,10 +324,11 @@ func swapChainCandidates(transparent bool) [2]dxgi.SwapChainDesc1 {
 }
 
 func (p *Painter) configureFrameLatency() error {
-	var unknown *com.Unknown
-	if hr := p.swapChain.QueryInterface(dxgi.IID_IDXGISwapChain2, &unknown); hr.Failed() {
+	out := new(*com.Unknown)
+	if hr := p.swapChain.QueryInterface(dxgi.IID_IDXGISwapChain2, out); hr.Failed() {
 		return fmt.Errorf("query IDXGISwapChain2: %v", hr)
 	}
+	unknown := *out
 	swapChain2 := (*dxgi.SwapChain2)(unsafe.Pointer(unknown))
 	defer swapChain2.Release()
 	if hr := swapChain2.SetMaximumFrameLatency(1); hr.Failed() {
@@ -352,6 +380,7 @@ func isDeviceLost(hr com.HRESULT) bool {
 }
 
 func (p *Painter) handleDeviceFailure(hr com.HRESULT) {
+	d2dTrace("device failure hr=%#x lost=%v", uint32(hr), isDeviceLost(hr))
 	if isDeviceLost(hr) {
 		p.releaseDeviceResources()
 		return
@@ -377,6 +406,8 @@ func (p *Painter) Destroy() {
 }
 
 func (p *Painter) releaseDeviceResources() {
+	d2dTrace("releaseDeviceResources rt=%#x stops=%#x brush=%#x",
+		uintptr(unsafe.Pointer(p.render)), uintptr(unsafe.Pointer(p.linearStops)), uintptr(unsafe.Pointer(p.linearBrush)))
 	p.releaseComposition()
 	p.activeFrame = false
 	p.clipActive = false
@@ -598,6 +629,7 @@ func (p *Painter) Begin(width, height, scale float32) {
 		return
 	}
 	if p.render == nil {
+		d2dTrace("begin recreate device resources")
 		if err := p.createDeviceResources(); err != nil {
 			return
 		}
@@ -1145,6 +1177,10 @@ func (p *Painter) setLinearGradient(gradient graphics.LinearGradient) bool {
 	// linearBrush 为 nil 而 hasLinear 仍为 true 是设备资源重建后的不完整状态，
 	// 必须重建，否则 SetStartPoint 会打在空指针上。
 	if p.linearBrush == nil || !p.hasLinear || p.linearStart != gradient.StartColor || p.linearEnd != gradient.EndColor {
+		if !comVtableAlive(unsafe.Pointer(p.render)) {
+			d2dTrace("grad rebuild: render dead rt=%#x", uintptr(unsafe.Pointer(p.render)))
+			return false
+		}
 		if p.linearBrush != nil {
 			p.linearBrush.Release()
 			p.linearBrush = nil
@@ -1176,6 +1212,14 @@ func (p *Painter) setLinearGradient(gradient graphics.LinearGradient) bool {
 		var hr com.HRESULT
 		p.linearStops, hr = p.render.CreateGradientStopCollection(stops[:], d2d1.D2D1_GAMMA_2_2, d2d1.D2D1_EXTEND_MODE_CLAMP)
 		if hr.Failed() {
+			d2dTrace("grad rebuild: stops hr=%#x rt=%#x", uint32(hr), uintptr(unsafe.Pointer(p.render)))
+			return false
+		}
+		if !comVtableAlive(unsafe.Pointer(p.linearStops)) {
+			// 不 Release：vtable 为 0 的实例上调用 Release 会直接 AV，降级纯色。
+			d2dTrace("grad rebuild: stops dead stops=%#x rt=%#x",
+				uintptr(unsafe.Pointer(p.linearStops)), uintptr(unsafe.Pointer(p.render)))
+			p.linearStops = nil
 			return false
 		}
 		props := d2d1.LinearGradientBrushProperties{
@@ -1184,17 +1228,50 @@ func (p *Painter) setLinearGradient(gradient graphics.LinearGradient) bool {
 		}
 		p.linearBrush, hr = p.render.CreateLinearGradientBrush(&props, nil, p.linearStops)
 		if hr.Failed() {
+			d2dTrace("grad rebuild: brush hr=%#x rt=%#x stops=%#x",
+				uint32(hr), uintptr(unsafe.Pointer(p.render)), uintptr(unsafe.Pointer(p.linearStops)))
 			p.linearStops.Release()
 			p.linearStops = nil
 			return false
 		}
+		if !comVtableAlive(unsafe.Pointer(p.linearBrush)) {
+			d2dTrace("grad rebuild: brush dead brush=%#x rt=%#x stops=%#x",
+				uintptr(unsafe.Pointer(p.linearBrush)), uintptr(unsafe.Pointer(p.render)), uintptr(unsafe.Pointer(p.linearStops)))
+			p.linearBrush = nil
+			p.linearStops.Release()
+			p.linearStops = nil
+			return false
+		}
+		d2dTrace("grad rebuild ok rt=%#x stops=%#x brush=%#x %08x->%08x",
+			uintptr(unsafe.Pointer(p.render)), uintptr(unsafe.Pointer(p.linearStops)), uintptr(unsafe.Pointer(p.linearBrush)),
+			gradColorKey(gradient.StartColor), gradColorKey(gradient.EndColor))
 		p.linearStart, p.linearEnd = gradient.StartColor, gradient.EndColor
 		p.hasLinear = true
 	} else {
+		if !comVtableAlive(unsafe.Pointer(p.linearBrush)) {
+			d2dTrace("grad cache: brush dead brush=%#x", uintptr(unsafe.Pointer(p.linearBrush)))
+			p.linearBrush = nil
+			p.hasLinear = false
+			return false
+		}
 		p.linearBrush.SetStartPoint(d2d1.Point2F{X: gradient.Start.X, Y: gradient.Start.Y})
 		p.linearBrush.SetEndPoint(d2d1.Point2F{X: gradient.End.X, Y: gradient.End.Y})
 	}
 	return true
+}
+
+// gradColorKey 把颜色压成 8 位十六进制方便 trace 对比。
+func gradColorKey(c graphics.Color) uint32 {
+	enc := func(v float32) uint32 {
+		if v <= 0 {
+			return 0
+		}
+		if v >= 1 {
+			return 0xff
+		}
+		return uint32(v*255 + 0.5)
+	}
+	return enc(c.R)<<24 | enc(c.G)<<16 | enc(c.B)<<8 | enc(c.A)
 }
 
 func (p *Painter) setRect(rect graphics.Rectangle) {

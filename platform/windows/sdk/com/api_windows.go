@@ -143,7 +143,9 @@ func UninitializeOLE() {
 }
 
 func CreateInstance[T isUnknown](clsid CLSID, outer **T, clsCtx CLSCTX, iid IID) (inst *T, hr HRESULT) {
-	ret, _, _ := coCreateInstance.CallRaw(uintptr(cgo.Pointer(&clsid)), uintptr(cgo.Pointer(outer)), uintptr(clsCtx), uintptr(cgo.Pointer(&iid)), uintptr(cgo.Pointer(&inst)))
+	out := new(*T)
+	ret, _, _ := coCreateInstance.CallRaw(uintptr(cgo.Pointer(&clsid)), uintptr(cgo.Pointer(outer)), uintptr(clsCtx), uintptr(cgo.Pointer(&iid)), uintptr(cgo.Pointer(out)))
+	inst = *out
 	hr = HRESULT(ret)
 	return
 }

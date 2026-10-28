@@ -68,13 +68,17 @@ type ImagingFactory struct {
 func (ImagingFactory) isImagingFactory() {}
 
 func (this *ImagingFactory) CreateBitmap(width, height int, pixelFormat com.GUID, option BitmapCreateCacheOption) (bitmap *Bitmap, hr com.HRESULT) {
-	ret, _, _ := this.class().CreateBitmap.CallRaw(uintptr(cgo.Pointer(this)), uintptr(width), uintptr(height), uintptr(cgo.Pointer(&pixelFormat)), uintptr(option), uintptr(cgo.Pointer(&bitmap)))
+	out := new(*Bitmap)
+	ret, _, _ := this.class().CreateBitmap.CallRaw(uintptr(cgo.Pointer(this)), uintptr(width), uintptr(height), uintptr(cgo.Pointer(&pixelFormat)), uintptr(option), uintptr(cgo.Pointer(out)))
+	bitmap = *out
 	hr = com.HRESULT(ret)
 	return
 }
 
 func (this *ImagingFactory) CreateBitmapFromMemory(width, height int, pixelFormat com.GUID, stride int, data []byte) (bitmap *Bitmap, hr com.HRESULT) {
-	ret, _, _ := this.class().CreateBitmapFromMemory.CallRaw(uintptr(cgo.Pointer(this)), uintptr(width), uintptr(height), uintptr(cgo.Pointer(&pixelFormat)), uintptr(stride), uintptr(len(data)), uintptr(cgo.CSlice(data)), uintptr(cgo.Pointer(&bitmap)))
+	out := new(*Bitmap)
+	ret, _, _ := this.class().CreateBitmapFromMemory.CallRaw(uintptr(cgo.Pointer(this)), uintptr(width), uintptr(height), uintptr(cgo.Pointer(&pixelFormat)), uintptr(stride), uintptr(len(data)), uintptr(cgo.CSlice(data)), uintptr(cgo.Pointer(out)))
+	bitmap = *out
 	hr = com.HRESULT(ret)
 	return
 }

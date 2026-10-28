@@ -16,7 +16,9 @@ var (
 
 func CreateFactory[F isFactory](factoryType FactoryType, iid com.IID) (factory *F, err error) {
 	if err = dwriteCreateFactory.Find(); err == nil {
-		ret, _, _ := dwriteCreateFactory.CallRaw(uintptr(factoryType), uintptr(cgo.Pointer(&iid)), uintptr(cgo.Pointer(&factory)))
+		out := new(*F)
+		ret, _, _ := dwriteCreateFactory.CallRaw(uintptr(factoryType), uintptr(cgo.Pointer(&iid)), uintptr(cgo.Pointer(out)))
+		factory = *out
 		if com.HRESULT(ret).Failed() {
 			err = com.HRESULT(ret)
 		}
@@ -74,7 +76,9 @@ func (this *Factory) UnregisterFontFileLoader(loader *FontFileLoader) com.HRESUL
 func (this *Factory) CreateTextFormat(fontFamily string, collection *FontCollection, weight FontWeight, style FontStyle, stretch FontStretch, size float32, locale string) (format *TextFormat, hr com.HRESULT) {
 	wFamily, _ := syscall.UTF16PtrFromString(fontFamily)
 	wLocale, _ := syscall.UTF16PtrFromString(locale)
-	hr = cgo.CallRet[com.HRESULT](this.class().CreateTextFormat, this, wFamily, collection, weight, style, stretch, size, wLocale, &format)
+	out := new(*TextFormat)
+	hr = cgo.CallRet[com.HRESULT](this.class().CreateTextFormat, this, wFamily, collection, weight, style, stretch, size, wLocale, out)
+	format = *out
 	runtime.KeepAlive(wFamily)
 	runtime.KeepAlive(wLocale)
 	return
@@ -82,7 +86,9 @@ func (this *Factory) CreateTextFormat(fontFamily string, collection *FontCollect
 
 func (this *Factory) CreateTextLayout(text string, format *TextFormat, maxWidth, maxHeight float32) (layout *TextLayout, hr com.HRESULT) {
 	wText, _ := syscall.UTF16FromString(text)
-	hr = cgo.CallRet[com.HRESULT](this.class().CreateTextLayout, this, cgo.CSlice(wText), len(wText), format, maxWidth, maxHeight, &layout)
+	out := new(*TextLayout)
+	hr = cgo.CallRet[com.HRESULT](this.class().CreateTextLayout, this, cgo.CSlice(wText), len(wText), format, maxWidth, maxHeight, out)
+	layout = *out
 	runtime.KeepAlive(wText)
 	return
 }
@@ -96,7 +102,9 @@ func (this *Factory) CreateFontFileReference(path string) (file *FontFile, hr co
 	if err != nil {
 		return nil, com.E_INVALIDARG
 	}
-	hr = cgo.CallRet[com.HRESULT](this.class().CreateFontFileReference, this, wPath, uintptr(0), &file)
+	out := new(*FontFile)
+	hr = cgo.CallRet[com.HRESULT](this.class().CreateFontFileReference, this, wPath, uintptr(0), out)
+	file = *out
 	runtime.KeepAlive(wPath)
 	return
 }
@@ -140,22 +148,30 @@ type Factory3 struct{ Factory }
 func (this *Factory3) class() *Factory3Class { return (*Factory3Class)(this.Class) }
 
 func (this *Factory3) CreateFontFaceReference(file *FontFile, index uint32, simulations uint32) (ref *FontFaceReference, hr com.HRESULT) {
-	hr = cgo.CallRet[com.HRESULT](this.class().CreateFontFaceReference_, this, file, index, simulations, &ref)
+	out := new(*FontFaceReference)
+	hr = cgo.CallRet[com.HRESULT](this.class().CreateFontFaceReference_, this, file, index, simulations, out)
+	ref = *out
 	return
 }
 
 func (this *Factory3) GetSystemFontSet() (set *FontSet, hr com.HRESULT) {
-	hr = cgo.CallRet[com.HRESULT](this.class().GetSystemFontSet, this, &set)
+	out := new(*FontSet)
+	hr = cgo.CallRet[com.HRESULT](this.class().GetSystemFontSet, this, out)
+	set = *out
 	return
 }
 
 func (this *Factory3) CreateFontSetBuilder() (builder *FontSetBuilder, hr com.HRESULT) {
-	hr = cgo.CallRet[com.HRESULT](this.class().CreateFontSetBuilder, this, &builder)
+	out := new(*FontSetBuilder)
+	hr = cgo.CallRet[com.HRESULT](this.class().CreateFontSetBuilder, this, out)
+	builder = *out
 	return
 }
 
 func (this *Factory3) CreateFontCollectionFromFontSet(set *FontSet) (collection *FontCollection1, hr com.HRESULT) {
-	hr = cgo.CallRet[com.HRESULT](this.class().CreateFontCollectionFromFontSet, this, set, &collection)
+	out := new(*FontCollection1)
+	hr = cgo.CallRet[com.HRESULT](this.class().CreateFontCollectionFromFontSet, this, set, out)
+	collection = *out
 	return
 }
 
@@ -184,13 +200,17 @@ type Factory5 struct {
 }
 
 func (this *Factory5) CreateFontSetBuilder() (fontSetBuilder *FontSetBuilder1, hr com.HRESULT) {
-	ret, _, _ := this.class().IDWriteFactory5_CreateFontSetBuilder.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(&fontSetBuilder)))
+	out := new(*FontSetBuilder1)
+	ret, _, _ := this.class().IDWriteFactory5_CreateFontSetBuilder.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(out)))
+	fontSetBuilder = *out
 	hr = com.HRESULT(ret)
 	return
 }
 
 func (this *Factory5) CreateInMemoryFontFileLoader() (loader *InMemoryFontFileLoader, hr com.HRESULT) {
-	ret, _, _ := this.class().CreateInMemoryFontFileLoader.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(&loader)))
+	out := new(*InMemoryFontFileLoader)
+	ret, _, _ := this.class().CreateInMemoryFontFileLoader.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(out)))
+	loader = *out
 	hr = com.HRESULT(ret)
 	return
 }
@@ -232,7 +252,9 @@ func (this *FontFallbackBuilder) AddMappings(fallback *FontFallback) com.HRESULT
 }
 
 func (this *FontFallbackBuilder) CreateFontFallback() (fallback *FontFallback, hr com.HRESULT) {
-	ret, _, _ := this.class().CreateFontFallback.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(&fallback)))
+	out := new(*FontFallback)
+	ret, _, _ := this.class().CreateFontFallback.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(out)))
+	fallback = *out
 	hr = com.HRESULT(ret)
 	return
 }
@@ -312,7 +334,9 @@ type InMemoryFontFileLoader struct {
 }
 
 func (this *InMemoryFontFileLoader) CreateInMemoryFontFileReference(factory *Factory, data []byte, owner *com.Unknown) (fontFile *FontFile, hr com.HRESULT) {
-	ret, _, _ := this.class().CreateInMemoryFontFileReference.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(factory)), uintptr(cgo.CSlice(data)), uintptr(len(data)), uintptr(cgo.Pointer(owner)), uintptr(cgo.Pointer(&fontFile)))
+	out := new(*FontFile)
+	ret, _, _ := this.class().CreateInMemoryFontFileReference.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(factory)), uintptr(cgo.CSlice(data)), uintptr(len(data)), uintptr(cgo.Pointer(owner)), uintptr(cgo.Pointer(out)))
+	fontFile = *out
 	hr = com.HRESULT(ret)
 	return
 }
@@ -343,7 +367,9 @@ func (this *FontCollection) GetFontFamilyCount() int {
 }
 
 func (this *FontCollection) GetFontFamily(index int) (family *FontFamily, hr com.HRESULT) {
-	ret, _, _ := this.class().GetFontFamily.CallRaw(uintptr(cgo.Pointer(this)), uintptr(index), uintptr(cgo.Pointer(&family)))
+	out := new(*FontFamily)
+	ret, _, _ := this.class().GetFontFamily.CallRaw(uintptr(cgo.Pointer(this)), uintptr(index), uintptr(cgo.Pointer(out)))
+	family = *out
 	hr = com.HRESULT(ret)
 	return
 }
@@ -358,8 +384,10 @@ func (this *FontCollection) FindFamilyName(name string) (index uint32, exists bo
 		return 0, false, com.E_INVALIDARG
 	}
 	var nativeExists int32
-	hr = cgo.CallRet[com.HRESULT](this.class().FindFamilyName, this, wName, &index, &nativeExists)
+	indexOut, existsOut := new(uint32), new(int32)
+	hr = cgo.CallRet[com.HRESULT](this.class().FindFamilyName, this, wName, indexOut, existsOut)
 	runtime.KeepAlive(wName)
+	index, nativeExists = *indexOut, *existsOut
 	exists = nativeExists != 0
 	return
 }
@@ -395,9 +423,9 @@ func (this *FontFace) GetType() FontFaceType {
 }
 
 func (this *FontFace) GetFiles() ([]*FontFile, com.HRESULT) {
-	var count int
-	var fontFiles *FontFile
-	ret, _, _ := this.class().GetFiles.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(&count)), uintptr(cgo.Pointer(&fontFiles)))
+	countOut, filesOut := new(int), new(*FontFile)
+	ret, _, _ := this.class().GetFiles.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(countOut)), uintptr(cgo.Pointer(filesOut)))
+	count, fontFiles := *countOut, *filesOut
 	if ret == 0 {
 		return cgo.GoSliceN[*FontFile](cgo.Pointer(fontFiles), count), 0
 	}
@@ -517,7 +545,9 @@ type FontFile struct {
 
 func (this *FontFile) Analyze() (supported bool, fileType uint32, faceType FontFaceType, count uint32, hr com.HRESULT) {
 	var nativeSupported int32
-	hr = cgo.CallRet[com.HRESULT]((*FontFileClass)(this.Class).Analyze, this, &nativeSupported, &fileType, &faceType, &count)
+	nativeSupportedOut, fileTypeOut, faceTypeOut, countOut := new(int32), new(uint32), new(FontFaceType), new(uint32)
+	hr = cgo.CallRet[com.HRESULT]((*FontFileClass)(this.Class).Analyze, this, nativeSupportedOut, fileTypeOut, faceTypeOut, countOut)
+	nativeSupported, fileType, faceType, count = *nativeSupportedOut, *fileTypeOut, *faceTypeOut, *countOut
 	supported = nativeSupported != 0
 	return
 }
@@ -549,7 +579,9 @@ type FontFamily struct {
 }
 
 func (this *FontFamily) GetFamilyNames() (names *LocalizedStrings, hr com.HRESULT) {
-	ret, _, _ := this.class().GetFamilyNames.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(&names)))
+	out := new(*LocalizedStrings)
+	ret, _, _ := this.class().GetFamilyNames.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(out)))
+	names = *out
 	hr = com.HRESULT(ret)
 	return
 }
@@ -559,7 +591,9 @@ func (this *FontFamily) class() *FontFamilyClass {
 }
 
 func (this *FontFamily) GetFirstMatchingFont(weight FontWeight, stretch FontStretch, style FontStyle) (font *Font, hr com.HRESULT) {
-	hr = cgo.CallRet[com.HRESULT](this.class().GetFirstMatchingFont, this, weight, stretch, style, &font)
+	out := new(*Font)
+	hr = cgo.CallRet[com.HRESULT](this.class().GetFirstMatchingFont, this, weight, stretch, style, out)
+	font = *out
 	return
 }
 
@@ -594,7 +628,9 @@ func (this *LocalizedStrings) GetString(index int) string {
 }
 
 func (this *LocalizedStrings) GetStringLength(index int) (length int) {
-	this.class().GetStringLength.CallRaw(uintptr(cgo.Pointer(this)), uintptr(index), uintptr(cgo.Pointer(&length)))
+	out := new(int)
+	this.class().GetStringLength.CallRaw(uintptr(cgo.Pointer(this)), uintptr(index), uintptr(cgo.Pointer(out)))
+	length = *out
 	return
 }
 
@@ -618,7 +654,9 @@ type FontSetBuilder struct {
 }
 
 func (this *FontSetBuilder) CreateFontSet() (fontSet *FontSet, hr com.HRESULT) {
-	ret, _, _ := this.class().CreateFontSet.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(&fontSet)))
+	out := new(*FontSet)
+	ret, _, _ := this.class().CreateFontSet.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(out)))
+	fontSet = *out
 	hr = com.HRESULT(ret)
 	return
 }
@@ -682,7 +720,9 @@ func (this *FontSet) GetFontCount() int {
 }
 
 func (this *FontSet) GetFontFaceReference(index int) (ref *FontFaceReference, hr com.HRESULT) {
-	ret, _, _ := this.class().GetFontFaceReference.CallRaw(uintptr(cgo.Pointer(this)), uintptr(index), uintptr(cgo.Pointer(&ref)))
+	out := new(*FontFaceReference)
+	ret, _, _ := this.class().GetFontFaceReference.CallRaw(uintptr(cgo.Pointer(this)), uintptr(index), uintptr(cgo.Pointer(out)))
+	ref = *out
 	hr = com.HRESULT(ret)
 	return
 }
@@ -709,7 +749,9 @@ type FontClass struct {
 type Font struct{ com.Unknown }
 
 func (this *Font) GetFaceNames() (names *LocalizedStrings, hr com.HRESULT) {
-	hr = cgo.CallRet[com.HRESULT]((*FontClass)(this.Class).GetFaceNames, this, &names)
+	out := new(*LocalizedStrings)
+	hr = cgo.CallRet[com.HRESULT]((*FontClass)(this.Class).GetFaceNames, this, out)
+	names = *out
 	return
 }
 
@@ -991,21 +1033,26 @@ func (this *TextLayout) DetermineMinWidth() (minWidth float32) {
 
 func (this *TextLayout) HitTestPoint(x, y float32) (isTrailing, isInside bool, hitTestMetrics HitTestMetrics, hr com.HRESULT) {
 	var trailing, inside winapi.BOOL
-	hr = cgo.CallRet[com.HRESULT](this.class().HitTestPoint, this, x, y, &trailing, &inside, &hitTestMetrics)
+	trailingOut, insideOut, metricsOut := new(winapi.BOOL), new(winapi.BOOL), new(HitTestMetrics)
+	hr = cgo.CallRet[com.HRESULT](this.class().HitTestPoint, this, x, y, trailingOut, insideOut, metricsOut)
+	trailing, inside, hitTestMetrics = *trailingOut, *insideOut, *metricsOut
 	isTrailing, isInside = trailing != 0, inside != 0
 	return
 }
 
 func (this *TextLayout) HitTestTextPosition(position int, isTrialing bool) (x, y float32, hitTestMetrics HitTestMetrics, hr com.HRESULT) {
-	hr = cgo.CallRet[com.HRESULT](this.class().HitTestTextPosition, this, position, isTrialing, &x, &y, &hitTestMetrics)
+	xOut, yOut, metricsOut := new(float32), new(float32), new(HitTestMetrics)
+	hr = cgo.CallRet[com.HRESULT](this.class().HitTestTextPosition, this, position, isTrialing, xOut, yOut, metricsOut)
+	x, y, hitTestMetrics = *xOut, *yOut, *metricsOut
 	return
 }
 
 func (this *TextLayout) HitTestTextRange(position, length int, x, y float32) (hitTestMetrics []HitTestMetrics, hr com.HRESULT) {
-	var count int
-	cgo.Call(this.class().HitTestTextRange, this, position, length, x, y, 0, 0, &count)
+	countOut := new(int)
+	cgo.Call(this.class().HitTestTextRange, this, position, length, x, y, 0, 0, countOut)
+	count := *countOut
 	hitTestMetrics = make([]HitTestMetrics, count)
-	hr = cgo.CallRet[com.HRESULT](this.class().HitTestTextRange, this, position, length, x, y, cgo.CSlice(hitTestMetrics), len(hitTestMetrics), &count)
+	hr = cgo.CallRet[com.HRESULT](this.class().HitTestTextRange, this, position, length, x, y, cgo.CSlice(hitTestMetrics), len(hitTestMetrics), countOut)
 	return
 }
 

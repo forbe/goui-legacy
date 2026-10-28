@@ -20,6 +20,10 @@ func CreateDevice(driverType DriverType, flags CreateDeviceFlag, levels []Featur
 	if err := d3d11CreateDevice.Find(); err != nil {
 		return nil, 0, nil, com.HRESULT(-2147467259)
 	}
+	// 同 d2d1.Factory1.CreateDevice：写回目标放堆上，避免栈地址在 syscall 期间失效。
+	deviceOut := new(*Device)
+	selectedOut := new(FeatureLevel)
+	immediateOut := new(*DeviceContext)
 	ret, _, _ := d3d11CreateDevice.CallRaw(
 		0,
 		uintptr(driverType),
@@ -28,10 +32,13 @@ func CreateDevice(driverType DriverType, flags CreateDeviceFlag, levels []Featur
 		uintptr(cgo.CSlice(levels)),
 		uintptr(len(levels)),
 		D3D11_SDK_VERSION,
-		uintptr(cgo.Pointer(&device)),
-		uintptr(cgo.Pointer(&selected)),
-		uintptr(cgo.Pointer(&immediate)),
+		uintptr(cgo.Pointer(deviceOut)),
+		uintptr(cgo.Pointer(selectedOut)),
+		uintptr(cgo.Pointer(immediateOut)),
 	)
+	device = *deviceOut
+	selected = *selectedOut
+	immediate = *immediateOut
 	hr = com.HRESULT(ret)
 	return
 }

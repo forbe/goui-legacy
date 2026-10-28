@@ -39,7 +39,9 @@ type DeviceClass struct {
 type Device struct{ Object }
 
 func (d *Device) GetAdapter() (adapter *Adapter, hr com.HRESULT) {
-	ret, _, _ := (*DeviceClass)(d.Class).GetAdapter.CallRaw(uintptr(cgo.Pointer(d)), uintptr(cgo.Pointer(&adapter)))
+	out := new(*Adapter)
+	ret, _, _ := (*DeviceClass)(d.Class).GetAdapter.CallRaw(uintptr(cgo.Pointer(d)), uintptr(cgo.Pointer(out)))
+	adapter = *out
 	return adapter, com.HRESULT(ret)
 }
 
@@ -152,7 +154,9 @@ func (s *SwapChain1) Present(syncInterval, flags uint32) com.HRESULT {
 }
 
 func (s *SwapChain1) GetBuffer(index uint32, iid com.IID) (surface *Surface, hr com.HRESULT) {
-	ret, _, _ := (*SwapChain1Class)(s.Class).GetBuffer.CallRaw(uintptr(cgo.Pointer(s)), uintptr(index), uintptr(cgo.Pointer(&iid)), uintptr(cgo.Pointer(&surface)))
+	out := new(*Surface)
+	ret, _, _ := (*SwapChain1Class)(s.Class).GetBuffer.CallRaw(uintptr(cgo.Pointer(s)), uintptr(index), uintptr(cgo.Pointer(&iid)), uintptr(cgo.Pointer(out)))
+	surface = *out
 	return surface, com.HRESULT(ret)
 }
 

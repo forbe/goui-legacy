@@ -20,7 +20,9 @@ var IID_ID2D1Factory = com.DefineGuid(0x06152247, 0x6f50, 0x465a, 0x92, 0x45, 0x
 
 func CreateFactory[F isFactory](factoryType FactoryType, iid com.IID, factoryOptions *FactoryOptions) (factory *F, err error) {
 	if err = d2d1CreateFactory.Find(); err == nil {
-		ret, _, _ := d2d1CreateFactory.CallRaw(uintptr(factoryType), uintptr(cgo.Pointer(&iid)), uintptr(cgo.Pointer(factoryOptions)), uintptr(cgo.Pointer(&factory)))
+		out := new(*F)
+		ret, _, _ := d2d1CreateFactory.CallRaw(uintptr(factoryType), uintptr(cgo.Pointer(&iid)), uintptr(cgo.Pointer(factoryOptions)), uintptr(cgo.Pointer(out)))
+		factory = *out
 		if com.HRESULT(ret).Failed() {
 			err = com.HRESULT(ret)
 		}
@@ -58,25 +60,33 @@ type Factory struct {
 func (this Factory) isFactory() {}
 
 func (this *Factory) CreateHwndRenderTarget(renderTargetProperties *RenderTargetProperties, hwndRenderTargetProperties *HwndRenderTargetProperties) (hwndRenderTarget *HwndRenderTarget, hr com.HRESULT) {
-	ret, _, _ := this.class().CreateHwndRenderTarget.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(renderTargetProperties)), uintptr(cgo.Pointer(hwndRenderTargetProperties)), uintptr(cgo.Pointer(&hwndRenderTarget)))
+	out := new(*HwndRenderTarget)
+	ret, _, _ := this.class().CreateHwndRenderTarget.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(renderTargetProperties)), uintptr(cgo.Pointer(hwndRenderTargetProperties)), uintptr(cgo.Pointer(out)))
+	hwndRenderTarget = *out
 	hr = com.HRESULT(ret)
 	return
 }
 
 func (this *Factory) CreateWicBitmapRenderTarget(target *wic.Bitmap, props *RenderTargetProperties) (renderTarget *RenderTarget, hr com.HRESULT) {
-	ret, _, _ := this.class().CreateWicBitmapRenderTarget.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(target)), uintptr(cgo.Pointer(props)), uintptr(cgo.Pointer(&renderTarget)))
+	out := new(*RenderTarget)
+	ret, _, _ := this.class().CreateWicBitmapRenderTarget.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(target)), uintptr(cgo.Pointer(props)), uintptr(cgo.Pointer(out)))
+	renderTarget = *out
 	hr = com.HRESULT(ret)
 	return
 }
 
 func (this *Factory) CreatePathGeometry() (pathGeometry *PathGeometry, hr com.HRESULT) {
-	ret, _, _ := this.class().CreatePathGeometry.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(&pathGeometry)))
+	out := new(*PathGeometry)
+	ret, _, _ := this.class().CreatePathGeometry.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(out)))
+	pathGeometry = *out
 	hr = com.HRESULT(ret)
 	return
 }
 
 func (this *Factory) CreateStrokeStyle(props *StrokeStyleProperties, dashs []float32) (style *StrokeStyle, hr com.HRESULT) {
-	ret, _, _ := this.class().CreateStrokeStyle.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(props)), uintptr(cgo.CSlice(dashs)), uintptr(len(dashs)), uintptr(cgo.Pointer(&style)))
+	out := new(*StrokeStyle)
+	ret, _, _ := this.class().CreateStrokeStyle.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(props)), uintptr(cgo.CSlice(dashs)), uintptr(len(dashs)), uintptr(cgo.Pointer(out)))
+	style = *out
 	hr = com.HRESULT(ret)
 	return
 }
@@ -131,7 +141,9 @@ type Resource struct {
 }
 
 func (this *Resource) GetFactory() (factory *Factory) {
-	(*ResourceClass)(this.Class).GetFactory.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(&factory)))
+	out := new(*Factory)
+	(*ResourceClass)(this.Class).GetFactory.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(out)))
+	factory = *out
 	return
 }
 
@@ -200,44 +212,56 @@ type RenderTarget struct {
 // TODO: more method?
 
 func (this *RenderTarget) CreateBitmap(size SizeU, data []byte, stride int, properties *BitmapProperties) (bitmap *Bitmap, hr com.HRESULT) {
-	hr = cgo.CallRet[com.HRESULT](this.class().CreateBitmap, this, size, cgo.CSlice(data), stride, properties, &bitmap)
+	out := new(*Bitmap)
+	hr = cgo.CallRet[com.HRESULT](this.class().CreateBitmap, this, size, cgo.CSlice(data), stride, properties, out)
+	bitmap = *out
 	return
 }
 
 func (this *RenderTarget) CreateBitmapFromWicBitmap(wicBitmapSource *wic.BitmapSource, properties *BitmapProperties) (bitmap *Bitmap, hr com.HRESULT) {
-	ret, _, _ := this.class().CreateBitmapFromWicBitmap.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(wicBitmapSource)), uintptr(cgo.Pointer(properties)), uintptr(cgo.Pointer(&bitmap)))
+	out := new(*Bitmap)
+	ret, _, _ := this.class().CreateBitmapFromWicBitmap.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(wicBitmapSource)), uintptr(cgo.Pointer(properties)), uintptr(cgo.Pointer(out)))
+	bitmap = *out
 	hr = com.HRESULT(ret)
 	return
 }
 
 func (this *RenderTarget) CreateSolidColorBrush(color *ColorF, brushProperties *BrushProperties) (solidColorBrush *SolidColorBrush, hr com.HRESULT) {
-	ret, _, _ := this.class().CreateSolidColorBrush.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(color)), uintptr(cgo.Pointer(brushProperties)), uintptr(cgo.Pointer(&solidColorBrush)))
+	out := new(*SolidColorBrush)
+	ret, _, _ := this.class().CreateSolidColorBrush.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(color)), uintptr(cgo.Pointer(brushProperties)), uintptr(cgo.Pointer(out)))
+	solidColorBrush = *out
 	hr = com.HRESULT(ret)
 	return
 }
 
 func (this *RenderTarget) CreateGradientStopCollection(stops []GradientStop, gamma Gamma, extendMode ExtendMode) (collection *GradientStopCollection, hr com.HRESULT) {
+	out := new(*GradientStopCollection)
 	ret, _, _ := this.class().CreateGradientStopCollection.CallRaw(
 		uintptr(cgo.Pointer(this)), uintptr(cgo.CSlice(stops)), uintptr(len(stops)),
-		uintptr(gamma), uintptr(extendMode), uintptr(cgo.Pointer(&collection)),
+		uintptr(gamma), uintptr(extendMode), uintptr(cgo.Pointer(out)),
 	)
+	collection = *out
 	runtime.KeepAlive(stops)
 	return collection, com.HRESULT(ret)
 }
 
 func (this *RenderTarget) CreateLinearGradientBrush(props *LinearGradientBrushProperties, brushProperties *BrushProperties, collection *GradientStopCollection) (brush *LinearGradientBrush, hr com.HRESULT) {
+	out := new(*LinearGradientBrush)
 	ret, _, _ := this.class().CreateLinearGradientBrush.CallRaw(
 		uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(props)), uintptr(cgo.Pointer(brushProperties)),
-		uintptr(cgo.Pointer(collection)), uintptr(cgo.Pointer(&brush)),
+		uintptr(cgo.Pointer(collection)), uintptr(cgo.Pointer(out)),
 	)
+	brush = *out
 	return brush, com.HRESULT(ret)
 }
 
 func (this *RenderTarget) CreateRadialGradientBrush(props *RadialGradientBrushProperties, brushProperties *BrushProperties, collection *GradientStopCollection) (brush *RadialGradientBrush, hr com.HRESULT) {
+	out := new(*RadialGradientBrush)
 	ret, _, _ := this.class().CreateRadialGradientBrush.CallRaw(
 		uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(props)), uintptr(cgo.Pointer(brushProperties)),
-		uintptr(cgo.Pointer(collection)), uintptr(cgo.Pointer(&brush)),
+		uintptr(cgo.Pointer(collection)), uintptr(cgo.Pointer(out)),
 	)
+	brush = *out
 	return brush, com.HRESULT(ret)
 }
 
@@ -325,7 +349,9 @@ func (this *RenderTarget) SetTransform(transform *Matrix3x2F) {
 }
 
 func (this *RenderTarget) GetTransform() (transform Matrix3x2F) {
-	this.class().GetTransform.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(&transform)))
+	out := new(Matrix3x2F)
+	this.class().GetTransform.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(out)))
+	transform = *out
 	return
 }
 
@@ -492,7 +518,9 @@ type PathGeometry struct {
 }
 
 func (this *PathGeometry) Open() (sink *GeometrySink, hr com.HRESULT) {
-	ret, _, _ := this.class().Open.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(&sink)))
+	out := new(*GeometrySink)
+	ret, _, _ := this.class().Open.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(out)))
+	sink = *out
 	hr = com.HRESULT(ret)
 	return
 }
@@ -647,12 +675,16 @@ type DeviceContextClass struct {
 type DeviceContext struct{ RenderTarget }
 
 func (this *DeviceContext) CreateBitmap1(size SizeU, data []byte, pitch uint32, props *BitmapProperties1) (bitmap *Bitmap1, hr com.HRESULT) {
-	hr = cgo.CallRet[com.HRESULT]((*DeviceContextClass)(this.Class).CreateBitmap1, this, size, cgo.CSlice(data), pitch, props, &bitmap)
+	out := new(*Bitmap1)
+	hr = cgo.CallRet[com.HRESULT]((*DeviceContextClass)(this.Class).CreateBitmap1, this, size, cgo.CSlice(data), pitch, props, out)
+	bitmap = *out
 	return
 }
 
 func (this *RenderTarget) GetDpi() (x, y float32) {
-	cgo.Call(this.class().GetDpi, this, &x, &y)
+	xOut, yOut := new(float32), new(float32)
+	cgo.Call(this.class().GetDpi, this, xOut, yOut)
+	x, y = *xOut, *yOut
 	return
 }
 
@@ -661,22 +693,30 @@ func (this *RenderTarget) GetTextAntialiasMode() TextAntialiasMode {
 }
 
 func (this *DeviceContext) CreateBitmapFromDxgiSurface(surface *dxgi.Surface, props *BitmapProperties1) (bitmap *Bitmap1, hr com.HRESULT) {
-	ret, _, _ := (*DeviceContextClass)(this.Class).CreateBitmapFromDxgiSurface.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(surface)), uintptr(cgo.Pointer(props)), uintptr(cgo.Pointer(&bitmap)))
+	out := new(*Bitmap1)
+	ret, _, _ := (*DeviceContextClass)(this.Class).CreateBitmapFromDxgiSurface.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(surface)), uintptr(cgo.Pointer(props)), uintptr(cgo.Pointer(out)))
+	bitmap = *out
 	return bitmap, com.HRESULT(ret)
 }
 
 func (this *DeviceContext) CreateEffect(clsid com.CLSID) (effect *Effect, hr com.HRESULT) {
-	ret, _, _ := (*DeviceContextClass)(this.Class).CreateEffect.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(&clsid)), uintptr(cgo.Pointer(&effect)))
+	out := new(*Effect)
+	ret, _, _ := (*DeviceContextClass)(this.Class).CreateEffect.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(&clsid)), uintptr(cgo.Pointer(out)))
+	effect = *out
 	return effect, com.HRESULT(ret)
 }
 
 func (this *DeviceContext) CreateCommandList() (commandList *CommandList, hr com.HRESULT) {
-	ret, _, _ := (*DeviceContextClass)(this.Class).CreateCommandList.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(&commandList)))
+	out := new(*CommandList)
+	ret, _, _ := (*DeviceContextClass)(this.Class).CreateCommandList.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(out)))
+	commandList = *out
 	return commandList, com.HRESULT(ret)
 }
 
 func (this *DeviceContext) GetImageLocalBounds(image *Image) (bounds RectF, hr com.HRESULT) {
-	ret, _, _ := (*DeviceContextClass)(this.Class).GetImageLocalBounds.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(image)), uintptr(cgo.Pointer(&bounds)))
+	out := new(RectF)
+	ret, _, _ := (*DeviceContextClass)(this.Class).GetImageLocalBounds.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(image)), uintptr(cgo.Pointer(out)))
+	bounds = *out
 	return bounds, com.HRESULT(ret)
 }
 
@@ -759,7 +799,9 @@ func (this *Effect) SetInput(index uint32, image *Image, invalidate bool) {
 }
 
 func (this *Effect) GetOutput() (image *Image) {
-	(*EffectClass)(this.Class).GetOutput.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(&image)))
+	out := new(*Image)
+	(*EffectClass)(this.Class).GetOutput.CallRaw(uintptr(cgo.Pointer(this)), uintptr(cgo.Pointer(out)))
+	image = *out
 	return
 }
 
